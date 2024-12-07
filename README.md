@@ -20,4 +20,4 @@ docker compose -f compose-db.yml
 
 5. 在 .env 文件中，修改 MongoDB DB 的 hostname/ip， passowrd 和 user。
 
-6. VS Code VS 通过 F5 进行 Deubg，可以启动调试
+6. VS Code 中通过 F5 进行 Deubg，可以启动调试
