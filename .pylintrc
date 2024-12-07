@@ -1,0 +1,20 @@
+[MASTER]
+init-hook='import sys;'
+
+[MESSAGES CONTROL]
+disable=
+    no-member,
+    missing-module-docstring,
+    missing-class-docstring,
+    too-many-return-statements,
+    broad-exception-caught,
+    invalid-name,
+    missing-function-docstring,
+    broad-exception-raised
+    ; too-many-locals,
+    ; too-many-branches,
+    ; too-many-lines,
+
+[BASIC]
+# Maximum number of characters on a single line.
+max-line-length=120

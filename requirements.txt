@@ -1,0 +1,7 @@
+python_dateutil
+flask
+flask_cors
+werkzeug
+pymongo
+pandas
+python-dotenv
