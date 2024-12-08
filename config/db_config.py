@@ -8,7 +8,7 @@ load_dotenv()
 
 def get_mongo_client():
     if 'DOCKER_CONTAINER' in os.environ:
-        client = MongoClient('mongodb://root:password@mongo:27017/')
+        client = MongoClient('mongodb://root:password1234@mongo:27017/')
         logger.info("Running inside Docker container, using Docker MongoDB settings.")
     else:
         db_host = os.getenv('DB_HOST', 'localhost')
