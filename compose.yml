@@ -8,9 +8,9 @@ services:
         ports:
             - "6001:8080"
         environment:
-            - DEBUG=true
+            - DEBUG=false
             - TZ=Asia/Shanghai
-            - DOCKER_CONTAINER=true
+            # - DOCKER_CONTAINER=true
         depends_on:
             - mongo
         volumes:
