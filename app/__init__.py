@@ -1,10 +1,8 @@
-from flask import Flask, current_app
+from flask import Flask
 from flask_socketio import SocketIO
 from flask_login import LoginManager
 from config import db_config
-from .extensions import *
-from .models import User  #
-
+from .models import User
 
 socketio = SocketIO()
 login_manager = LoginManager()
@@ -22,15 +20,14 @@ def create_app():
     socketio.init_app(app)
 
     # Initialize LoginManager
+    login_manager.login_view = 'main.login'  # 设置登录视图
     login_manager.init_app(app)
-    login_manager.login_view = 'main.login'
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        user_data = app.db.users.find_one({'_id': user_id})
+        if user_data:
+            return User(user_data['username'], user_data['password'])
+        return None
 
     return app
-
-@login_manager.user_loader
-def load_user(user_id):
-    # 从数据库中加载用户
-    user_data = current_app.db.users.find_one({'username': user_id})
-    if user_data:
-        return User(user_data['username'], user_data['password'])
-    return None
