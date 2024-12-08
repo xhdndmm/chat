@@ -4,41 +4,6 @@
     <meta charset="UTF-8">
     <title>Admin Panel</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
-    <style>
-        /* 模态弹窗的样式 */
-        .modal {
-            display: none; /* 默认隐藏 */
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgb(0,0,0);
-            background-color: rgba(0,0,0,0.4);
-            padding-top: 60px;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
     <div id="admin-container">
@@ -58,43 +23,5 @@
             {% endif %}
         {% endwith %}
     </div>
-
-    <!-- 模态弹窗 -->
-    <div id="authModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>身份验证</h2>
-            <form id="authForm" method="post" action="{{ url_for('main.authenticate') }}">
-                <input type="text" name="auth_username" placeholder="用户名" required>
-                <input type="password" name="auth_password" placeholder="密码" required>
-                <button type="submit">登录</button>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        // 获取模态弹窗
-        var modal = document.getElementById("authModal");
-
-        // 获取 <span> 元素，关闭模态弹窗
-        var span = document.getElementsByClassName("close")[0];
-
-        // 打开模态弹窗
-        window.onload = function() {
-            modal.style.display = "block";
-        }
-
-        // 点击 <span> (x)，关闭模态弹窗
-        span.onclick = function() {
-            modal.style.display = "none";
-        }
-
-        // 点击模态弹窗外部，关闭模态弹窗
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
-    </script>
 </body>
 </html>

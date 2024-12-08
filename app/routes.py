@@ -66,15 +66,3 @@ def handle_message(data):
     emit('message', data, broadcast=True)
 
 
-@bp.route('/authenticate', methods=['POST'])
-def authenticate():
-    username = request.form['auth_username']
-    password = request.form['auth_password']
-    user_data = current_app.db.users.find_one({'username': username})
-
-    if user_data and User(user_data['username'], user_data['password']).check_password(password):
-        flash('身份验证成功')
-        return redirect(url_for('main.index'))
-    else:
-        flash('用户名或密码错误')
-        return redirect(url_for('main.admin'))
