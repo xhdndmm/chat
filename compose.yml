@@ -10,7 +10,7 @@ services:
         environment:
             - DEBUG=false
             - TZ=Asia/Shanghai
-            # - DOCKER_CONTAINER=true
+            - DOCKER_CONTAINER=true
         depends_on:
             - mongo
         volumes:
@@ -24,8 +24,8 @@ services:
         environment:
             MONGO_INITDB_ROOT_USERNAME: root
             MONGO_INITDB_ROOT_PASSWORD: password1234
-        ports:
-            - 27015:27017
+        # ports:
+        #     - 27017:27017
         volumes:
             - ./volumes/mongodb_data:/data/db
         networks:
