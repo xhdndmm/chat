@@ -17,6 +17,8 @@ services:
             - ./volumes/logs:/usr/src/app/logs
             - ./:/usr/src/app/
         restart: always
+        networks:
+            - chat-network
     mongo:
         image: mongo:latest
         container_name: chat-db-dev
