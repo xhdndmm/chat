@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <title>Admin Panel</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div id="login-container">
-        <h2>登录</h2>
+    <div id="admin-container">
+        <h2>管理员平台</h2>
         <form method="post">
             <input type="text" name="username" placeholder="用户名" required>
             <input type="password" name="password" placeholder="密码" required>
-            <button type="submit">登录</button>
+            <button type="submit">创建用户</button>
         </form>
         {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -23,9 +23,5 @@
             {% endif %}
         {% endwith %}
     </div>
-    <footer>
-        <p>&copy; 2024 版权所有</p>
-        <a href="/admin">管理员平台</a>
-    </footer>
 </body>
 </html>

@@ -6,3 +6,4 @@ pymongo
 pandas
 python-dotenv
 flask-socketio
+Flask-Login
