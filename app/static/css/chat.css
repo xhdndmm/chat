@@ -88,54 +88,42 @@ body {
 }
 
 .message {
-    max-width: 65%;
-    margin: 2px 0;
     display: flex;
-    flex-direction: column;
-    position: relative;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 8px 0;
+    max-width: 85%;
 }
 
 .message-other {
     align-self: flex-start;
-    padding-left: 12px;
 }
 
 .message-own {
+    flex-direction: row-reverse;
     align-self: flex-end;
-    padding-right: 12px;
 }
 
 .message-content {
     padding: 8px 12px;
     border-radius: 12px;
-    font-size: 14px;
-    line-height: 1.4;
-    word-wrap: break-word;
+    background-color: var(--message-other-bg);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    word-wrap: break-word;
 }
 
 .message-own .message-content {
     background-color: var(--message-own-bg);
-    border-bottom-right-radius: 4px;
-    color: #000000;
-}
-
-.message-other .message-content {
-    background-color: var(--message-other-bg);
-    border-bottom-left-radius: 4px;
-    color: #000000;
 }
 
 .message-username {
     font-size: 13px;
-    margin-bottom: 2px;
-    padding-left: 12px;
+    margin-bottom: 4px;
     color: #3390ec;
 }
 
 .message-own .message-username {
     text-align: right;
-    padding-right: 12px;
 }
 
 .message-time {
@@ -200,5 +188,283 @@ body {
 
 .messages::-webkit-scrollbar-thumb:hover {
     background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* 消息操作按钮 */
+.message-actions {
+    display: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    gap: 4px;
+}
+
+.message-other .message-actions {
+    right: auto;
+    left: -30px;
+}
+
+.message-own .message-actions {
+    left: auto;
+    right: -30px;
+}
+
+.message:hover .message-actions {
+    display: flex;
+}
+
+.action-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.1);
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.edit-btn:hover {
+    color: var(--primary-color);
+}
+
+.delete-btn:hover {
+    color: #ff4d4f;
+}
+
+.message-info {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    color: #707579;
+    margin-top: 2px;
+}
+
+.message-edited {
+    color: #707579;
+}
+
+.message-status {
+    color: var(--primary-color);
+}
+
+.edit-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--primary-color);
+    border-radius: 4px;
+    font-size: 14px;
+    margin-right: 8px;
+}
+
+.save-edit,
+.cancel-edit {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 4px;
+}
+
+.save-edit {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.cancel-edit {
+    background-color: #f0f0f0;
+    color: #666;
+}
+
+.typing-status {
+    display: none;
+    padding: 8px 16px;
+    color: #666;
+    font-size: 13px;
+    font-style: italic;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-top: 1px solid var(--border-color);
+    position: relative;
+}
+
+.typing-status:not(:empty) {
+    display: block;
+}
+
+/* 添加打字动画 */
+@keyframes typing-dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80% { content: '...'; }
+}
+
+.typing-status::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    animation: typing-dots 1.5s infinite;
+    position: absolute;
+}
+
+/* 文件上传按钮 */
+.file-upload-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    border-radius: 50%;
+    background-color: transparent;
+    transition: background-color 0.2s;
+}
+
+.file-upload-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.upload-icon {
+    width: 24px;
+    height: 24px;
+    fill: #666;
+}
+
+/* 文件消息样式 */
+.file-message {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    gap: 8px;
+    width: 100%;
+}
+
+.file-icon {
+    width: 24px;
+    height: 24px;
+    fill: var(--primary-color);
+}
+
+.image-preview {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+}
+
+/* 文件消息hover效果 */
+.file-message:hover {
+    opacity: 0.8;
+}
+
+/* 修改图片消息的样式 */
+.message-content.image-message {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    max-width: 300px;
+}
+
+/* 非图片文件的消息保持原有样式 */
+.message-content:not(.image-message) .file-message {
+    padding: 8px 12px;
+}
+
+/* 头像样式 */
+.message-avatar {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
+.message-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* 消息容器 */
+.message-container {
+    flex: 1;
+    min-width: 0;
+    max-width: calc(100% - 48px);
+}
+
+/* 消息内容样式 */
+.message-content-wrapper {
+    position: relative;
+    max-width: 100%;
+}
+
+.message-content {
+    padding: 8px 12px;
+    border-radius: 12px;
+    background-color: var(--message-other-bg);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    word-wrap: break-word;
+}
+
+.message-own .message-content {
+    background-color: var(--message-own-bg);
+}
+
+/* 用户名样式 */
+.message-username {
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: #3390ec;
+}
+
+.message-own .message-username {
+    text-align: right;
+}
+
+/* 图片消息样式 */
+.message-content.image-message {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    max-width: 300px;
+}
+
+.image-preview {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+}
+
+/* 消息操作按钮 */
+.message-actions {
+    display: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    gap: 4px;
+}
+
+.message-other .message-actions {
+    right: auto;
+    left: -30px;
+}
+
+.message-own .message-actions {
+    left: auto;
+    right: -30px;
+}
+
+.message:hover .message-actions {
+    display: flex;
 }
  

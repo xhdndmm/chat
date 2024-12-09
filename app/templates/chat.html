@@ -29,7 +29,16 @@
                 <!-- 消息会动态插入到这里 -->
             </div>
 
+            <!-- 添加输入状态提示区域 -->
+            <div class="typing-status" id="typing-status"></div>
+
             <form id="message-form" class="message-input">
+                <label for="file-input" class="file-upload-btn">
+                    <svg class="upload-icon" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                    </svg>
+                </label>
+                <input type="file" id="file-input" style="display: none">
                 <input type="text" id="input" placeholder="输入消息..." autocomplete="off">
                 <button type="submit">发送</button>
             </form>
@@ -42,54 +51,262 @@
             const form = document.getElementById('message-form');
             const input = document.getElementById('input');
             const messages = document.getElementById('messages');
-            
-            // 获取当前用户名
             const currentUsername = '{{ current_user.username }}';
+            const fileInput = document.getElementById('file-input');
 
-            // 添加消息到界面
             function appendMessage(msgData) {
                 const messageDiv = document.createElement('div');
-                // 判断消息是否为当前用户发送
                 const isOwn = msgData.username === currentUsername;
                 messageDiv.className = `message ${isOwn ? 'message-own' : 'message-other'}`;
-                
+                messageDiv.setAttribute('data-message-id', msgData.id);
+
+                // 添加头像
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'message-avatar';
+                const avatarImg = document.createElement('img');
+                avatarImg.src = msgData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msgData.username}`;
+                avatarImg.alt = msgData.username;
+                avatarDiv.appendChild(avatarImg);
+                messageDiv.appendChild(avatarDiv);
+
+                // 消息内容容器
+                const contentContainer = document.createElement('div');
+                contentContainer.className = 'message-container';
+
                 // 添加用户名
                 if (msgData.username) {
                     const usernameDiv = document.createElement('div');
                     usernameDiv.className = 'message-username';
                     usernameDiv.textContent = msgData.username;
-                    messageDiv.appendChild(usernameDiv);
+                    contentContainer.appendChild(usernameDiv);
                 }
-                
+
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'message-content-wrapper';
+
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'message-content';
-                contentDiv.textContent = msgData.text;
-                
-                const timeDiv = document.createElement('div');
-                timeDiv.className = 'message-time';
-                timeDiv.textContent = msgData.timestamp || new Date().toLocaleTimeString('zh-CN', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                messageDiv.appendChild(contentDiv);
-                messageDiv.appendChild(timeDiv);
+
+                // 根据消息类型显示不同内容
+                if (msgData.type === 'file') {
+                    const fileLink = document.createElement('a');
+                    fileLink.href = msgData.url;
+                    fileLink.target = '_blank';
+                    fileLink.className = 'file-message';
+
+                    // 判断文件类型
+                    const fileExt = msgData.filename.split('.').pop().toLowerCase();
+                    if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExt)) {
+                        // 图片消息使用特殊样式
+                        contentDiv.className = 'message-content image-message';
+                        
+                        // 图片预览
+                        const img = document.createElement('img');
+                        img.src = msgData.url;
+                        img.className = 'image-preview';
+                        fileLink.appendChild(img);
+                    } else {
+                        // 普通文件消息
+                        fileLink.innerHTML = `
+                            <svg class="file-icon" viewBox="0 0 24 24">
+                                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/>
+                            </svg>
+                            <span>${msgData.filename}</span>
+                        `;
+                    }
+                    contentDiv.appendChild(fileLink);
+                } else {
+                    contentDiv.textContent = msgData.text;
+                }
+
+                // 如果是自己的消息，添加编辑和删除按钮
+                if (isOwn) {
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'message-actions';
+                    
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'action-btn edit-btn';
+                    editBtn.innerHTML = '✎';
+                    editBtn.onclick = () => editMessage(msgData.id);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'action-btn delete-btn';
+                    deleteBtn.innerHTML = '×';
+                    deleteBtn.onclick = () => deleteMessage(msgData.id);
+
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    contentWrapper.appendChild(actionsDiv);
+                }
+
+                contentWrapper.appendChild(contentDiv);
+                contentContainer.appendChild(contentWrapper);
+                messageDiv.appendChild(contentContainer);
                 messages.appendChild(messageDiv);
-                
-                // 滚动到最新消息
                 messages.scrollTop = messages.scrollHeight;
             }
 
+            function editMessage(messageId) {
+                const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
+                const contentDiv = messageDiv.querySelector('.message-content');
+                const originalText = contentDiv.textContent;
+                
+                contentDiv.innerHTML = `
+                    <input type="text" class="edit-input" value="${originalText}">
+                    <button class="save-edit">保存</button>
+                    <button class="cancel-edit">取消</button>
+                `;
+                
+                const editInput = contentDiv.querySelector('.edit-input');
+                editInput.focus();
+                
+                contentDiv.querySelector('.save-edit').onclick = () => {
+                    const newText = editInput.value.trim();
+                    if (newText && newText !== originalText) {
+                        socket.emit('edit_message', {
+                            id: messageId,
+                            text: newText
+                        });
+                    }
+                    contentDiv.textContent = originalText;
+                };
+                
+                contentDiv.querySelector('.cancel-edit').onclick = () => {
+                    contentDiv.textContent = originalText;
+                };
+            }
+
+            function deleteMessage(messageId) {
+                if (confirm('确定要删除这条消息吗？')) {
+                    socket.emit('delete_message', { id: messageId });
+                }
+            }
+
+            // Socket.io 事件监听
+            socket.on('message', appendMessage);
+
+            socket.on('message_status', (data) => {
+                const messageDiv = document.querySelector(`[data-message-id="${data.id}"]`);
+                if (messageDiv) {
+                    const statusSpan = messageDiv.querySelector('.message-status');
+                    if (statusSpan) statusSpan.textContent = data.status;
+                }
+            });
+
+            socket.on('message_edited', (data) => {
+                const messageDiv = document.querySelector(`[data-message-id="${data.id}"]`);
+                if (messageDiv) {
+                    const contentDiv = messageDiv.querySelector('.message-content');
+                    contentDiv.textContent = data.text;
+                    
+                    const infoDiv = messageDiv.querySelector('.message-info');
+                    if (!infoDiv.querySelector('.message-edited')) {
+                        const editedSpan = document.createElement('span');
+                        editedSpan.className = 'message-edited';
+                        editedSpan.textContent = '(已编辑)';
+                        infoDiv.insertBefore(editedSpan, infoDiv.firstChild);
+                    }
+                }
+            });
+
+            socket.on('message_deleted', (data) => {
+                const messageDiv = document.querySelector(`[data-message-id="${data.id}"]`);
+                if (messageDiv) {
+                    messageDiv.remove();
+                }
+            });
+
+            // 表单提交
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
+                clearTimeout(typingTimer);
+                socket.emit('typing', { status: 'stopped' });
+                
                 if (input.value.trim()) {
                     socket.emit('message', input.value);
                     input.value = '';
                 }
             });
 
-            socket.on('message', (msgData) => {
-                appendMessage(msgData);
+            const typingStatus = document.getElementById('typing-status');
+            let typingTimer;
+            let typingUsers = new Set();
+
+            // 修改输入监听部分
+            input.addEventListener('input', () => {
+                if (input.value.trim()) {  // 只有当输入框有内容时才发送状态
+                    clearTimeout(typingTimer);
+                    socket.emit('typing', { status: 'typing' });
+                    
+                    typingTimer = setTimeout(() => {
+                        socket.emit('typing', { status: 'stopped' });
+                    }, 2000);
+                } else {
+                    clearTimeout(typingTimer);
+                    socket.emit('typing', { status: 'stopped' });
+                }
+            });
+
+            // 修改输入状态更新函数
+            function updateTypingStatus() {
+                if (typingUsers.size === 0) {
+                    typingStatus.textContent = '';
+                    typingStatus.style.display = 'none';
+                    return;
+                }
+
+                const users = Array.from(typingUsers);
+                let text = '';
+                
+                if (users.length === 1) {
+                    text = `${users[0]} 正在输入...`;
+                } else if (users.length === 2) {
+                    text = `${users[0]} 和 ${users[1]} 正在输入...`;
+                } else {
+                    text = `${users[0]} 和其他 ${users.length - 1} 人正在输入...`;
+                }
+
+                typingStatus.textContent = text;
+                typingStatus.style.display = 'block';
+                console.log('Typing status updated:', text); // 添加调试日志
+            }
+
+            // 修改输入状态监听
+            socket.on('typing_status', (data) => {
+                console.log('Received typing status:', data); // 添加调试日志
+                if (data.status === 'typing') {
+                    typingUsers.add(data.username);
+                } else {
+                    typingUsers.delete(data.username);
+                }
+                updateTypingStatus();
+            });
+
+            // 处理文件选择
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.error) {
+                        alert(result.error);
+                    }
+                    
+                    // 清除文件输入
+                    fileInput.value = '';
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    alert('文件上传失败');
+                }
             });
         });
     </script>
