@@ -938,6 +938,22 @@ body {
     max-height: 300px;
     border-radius: 8px;
     background: #000;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.video-preview:hover {
+    opacity: 0.9;
+}
+
+/* 视频加载失败样式 */
+.video-error {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    color: #ff4d4f;
+    font-size: 14px;
+    text-align: center;
 }
 
 /* 移除视频消息的气泡尾巴 */
@@ -949,5 +965,15 @@ body {
 .message-content.video-message .file-message {
     padding: 0;
     background: none;
+    display: inline-block;  /* 让容器适应视频大小 */
+}
+
+/* 视频控件样式优化 */
+.video-preview::-webkit-media-controls {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.video-preview::-webkit-media-controls-panel {
+    padding: 0 8px;
 }
  

@@ -272,6 +272,27 @@
                         video.src = msgData.url;
                         video.className = 'video-preview';
                         video.controls = true;
+                        video.preload = 'metadata';
+                        video.playsInline = true;
+                        video.poster = '';
+                        
+                        video.onerror = () => {
+                            video.style.display = 'none';
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'video-error';
+                            errorDiv.textContent = '视频加载失败';
+                            fileLink.appendChild(errorDiv);
+                        };
+                        
+                        video.onclick = (e) => {
+                            e.preventDefault();
+                            if (video.requestFullscreen) {
+                                video.requestFullscreen();
+                            } else if (video.webkitRequestFullscreen) {
+                                video.webkitRequestFullscreen();
+                            }
+                        };
+                        
                         fileLink.appendChild(video);
                     } else {
                         // 根据文件类型设置不同的图标和样式
@@ -558,7 +579,7 @@
                     const input = document.getElementById('input');
                     const emojiText = this.getAttribute('data-emoji');
                     
-                    // 在光标位置插入表情
+                    // 在��标位置插入表情
                     const start = input.selectionStart;
                     const end = input.selectionEnd;
                     input.value = input.value.slice(0, start) + emojiText + input.value.slice(end);

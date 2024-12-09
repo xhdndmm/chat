@@ -7,14 +7,8 @@ class User:
         self.username = username
         self.password = password
         self.is_admin = is_admin
-        self.avatar_url = avatar_url or f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"
-        self.settings = settings or {
-            'theme': 'light',
-            'notification': True,
-            'display_name': username,
-            'bio': '',
-            'email': ''
-        }
+        self.avatar_url = avatar_url
+        self.settings = settings or {}
 
     def check_password(self, password):
         return self.password == password
@@ -53,3 +47,11 @@ class User:
             }
         })
         return True
+
+    def get_avatar_url(self):
+        """获取用户头像URL"""
+        from flask import current_app
+        user_data = current_app.db.users.find_one({'username': self.username})
+        if user_data and 'avatar_url' in user_data:
+            return user_data['avatar_url']
+        return f"https://api.dicebear.com/7.x/avataaars/svg?seed={self.username}"
