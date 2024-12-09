@@ -125,13 +125,28 @@ def handle_connect():
         return False  # 阻止未登录用户连接
     messages = current_app.db.messages.find()
     for message in messages:
-        emit('message', message['message'])
+        # 确保消息数据是字典格式
+        if isinstance(message.get('message'), dict):
+            msg_data = message['message']
+        else:
+            # 如果是旧格式的消息，转换为新格式
+            msg_data = {
+                'text': message.get('message', ''),
+                'username': current_user.username,
+                'timestamp': datetime.now().strftime('%H:%M')
+            }
+        emit('message', msg_data)
 
 
 @socketio.on('message')
 @login_required
 def handle_message(data):
-    current_app.db.messages.insert_one({'message': data})
-    emit('message', data, broadcast=True)
+    message_data = {
+        'text': data,
+        'username': current_user.username,
+        'timestamp': datetime.now().strftime('%H:%M')
+    }
+    current_app.db.messages.insert_one({'message': message_data})
+    emit('message', message_data, broadcast=True)
 
 

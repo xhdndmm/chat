@@ -1,41 +1,97 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>Chat</title>
+    <title>聊天室</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- 左侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>聊天室</h2>
+                <button onclick="window.location.href='{{ url_for('main.logout') }}'" class="logout-btn">登出</button>
+            </div>
+            <div class="chat-list">
+                <!-- 这里可以后续添加聊天列表 -->
+            </div>
+        </div>
+
+        <!-- 右侧聊天区域 -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <h3>公共聊天室</h3>
+            </div>
+            
+            <div class="messages" id="messages">
+                <!-- 消息会动态插入到这里 -->
+            </div>
+
+            <form id="message-form" class="message-input">
+                <input type="text" id="input" placeholder="输入消息..." autocomplete="off">
+                <button type="submit">发送</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const socket = io();
-
-            const form = document.getElementById('form');
+            const form = document.getElementById('message-form');
             const input = document.getElementById('input');
             const messages = document.getElementById('messages');
+            
+            // 获取当前用户名
+            const currentUsername = '{{ current_user.username }}';
 
-            // 监听表单提交事件
+            // 添加消息到界面
+            function appendMessage(msgData) {
+                const messageDiv = document.createElement('div');
+                // 判断消息是否为当前用户发送
+                const isOwn = msgData.username === currentUsername;
+                messageDiv.className = `message ${isOwn ? 'message-own' : 'message-other'}`;
+                
+                // 添加用户名
+                if (msgData.username) {
+                    const usernameDiv = document.createElement('div');
+                    usernameDiv.className = 'message-username';
+                    usernameDiv.textContent = msgData.username;
+                    messageDiv.appendChild(usernameDiv);
+                }
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.textContent = msgData.text;
+                
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'message-time';
+                timeDiv.textContent = msgData.timestamp || new Date().toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(timeDiv);
+                messages.appendChild(messageDiv);
+                
+                // 滚动到最新消息
+                messages.scrollTop = messages.scrollHeight;
+            }
+
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                if (input.value) {
-                    // 发送消息到服务器
+                if (input.value.trim()) {
                     socket.emit('message', input.value);
                     input.value = '';
                 }
             });
 
-            // 监听服务器发送的消息事件
-            socket.on('message', (msg) => {
-                const item = document.createElement('li');
-                item.textContent = msg;
-                messages.appendChild(item);
+            socket.on('message', (msgData) => {
+                appendMessage(msgData);
             });
         });
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-</head>
-<body>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-        <input id="input" autocomplete="off" /><button>发送</button>
-    </form>
 </body>
 </html>
