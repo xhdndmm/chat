@@ -3,9 +3,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 
 class User:
-    def __init__(self, username, password):
+    def __init__(self, username, password, is_admin=False):
         self.username = username
         self.password = password
+        self.is_admin = is_admin
 
     def check_password(self, password):
         return self.password == password
@@ -28,9 +29,10 @@ class User:
     @staticmethod
     def create_user(db, username, password):
         if db.users.find_one({'username': username}):
-            return False  # 用户已存在
+            return False
         db.users.insert_one({
             'username': username,
-            'password': password  # 直接存储明文密码
+            'password': password,
+            'is_admin': False  # 普通用户默认不是管理员
         })
         return True

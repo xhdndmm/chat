@@ -1,27 +1,120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="admin-container">
-        <h2>管理员平台</h2>
-        <form method="post">
-            <input type="text" name="username" placeholder="用户名" required>
-            <input type="password" name="password" placeholder="密码" required>
-            <button type="submit">创建用户</button>
-        </form>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <ul>
-                {% for message in messages %}
-                    <li>{{ message }}</li>
+    <div class="admin-container">
+        <div class="header">
+            <h1>用户管理</h1>
+            <button class="add-btn" onclick="showAddModal()">添加用户</button>
+        </div>
+        
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>序号</th>
+                    <th>用户名</th>
+                    <th>密码</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>******</td>
+                    <td>{{ '管理员' if user.is_admin else '普通用户' }}</td>
+                    <td>正常</td>
+                    <td>{{ user.get('created_at', '').strftime('%Y-%m-%d %H:%M:%S') if user.get('created_at') else '未知' }}</td>
+                    <td class="actions">
+                        <button class="edit-btn" onclick="showEditModal('{{ user.username }}')">编辑</button>
+                        <button class="reset-btn" onclick="resetPassword('{{ user.username }}')">重置密码</button>
+                        <button class="delete-btn" onclick="deleteUser('{{ user.username }}')">删除</button>
+                    </td>
+                </tr>
                 {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
+            </tbody>
+        </table>
     </div>
+
+    <!-- 添加/编辑用户模态框 -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">添加用户</h2>
+            <form id="userForm" method="post">
+                <input type="hidden" id="editUsername" name="editUsername">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="is_admin"> 设为管理员
+                    </label>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit">保存</button>
+                    <button type="button" onclick="hideModal()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = '添加用户';
+            document.getElementById('userForm').reset();
+            document.getElementById('editUsername').value = '';
+            document.getElementById('userModal').style.display = 'flex';
+        }
+
+        function showEditModal(username) {
+            document.getElementById('modalTitle').textContent = '编辑用户';
+            document.getElementById('editUsername').value = username;
+            document.getElementById('username').value = username;
+            document.getElementById('userModal').style.display = 'flex';
+        }
+
+        function hideModal() {
+            document.getElementById('userModal').style.display = 'none';
+        }
+
+        function deleteUser(username) {
+            if (confirm('确定要删除用户 ' + username + ' 吗？')) {
+                fetch('/admin/delete/' + username, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            alert(data.message);
+                        }
+                    });
+            }
+        }
+
+        function resetPassword(username) {
+            if (confirm('确定要重置用户 ' + username + ' 的密码吗？')) {
+                fetch('/admin/reset_password/' + username, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message);
+                    });
+            }
+        }
+    </script>
 </body>
 </html>

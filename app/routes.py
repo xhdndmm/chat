@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template, Flask, current_app, request, redirect, url_for, flash  # 添加 request, redirect, url_for, flash
+from flask import Blueprint, render_template, Flask, current_app, request, redirect, url_for, flash, jsonify  # 添加 request, redirect, url_for, flash, jsonify
 from flask_socketio import SocketIO, emit
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user  # 添加 login_user, logout_user, login_required
 from config import db_config
 from .extensions import *
 from .models import User  #
 from . import socketio
+from datetime import datetime
 
 
 bp = Blueprint('main', __name__)
@@ -46,14 +47,76 @@ def index():
 
 @bp.route('/admin', methods=['GET', 'POST'])
 def admin():
+    if not current_user.is_authenticated or not current_user.is_admin:
+        flash('只有管理员可以访问此页面')
+        return redirect(url_for('main.login'))
+        
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if User.create_user(current_app.db, username, password):
-            flash('用户创建成功')
+        is_admin = 'is_admin' in request.form
+        
+        # 检查是否是编辑操作
+        edit_username = request.form.get('editUsername')
+        if edit_username:
+            # 更新用户信息
+            current_app.db.users.update_one(
+                {'username': edit_username},
+                {'$set': {
+                    'username': username,
+                    'password': password,
+                    'is_admin': is_admin
+                }}
+            )
+            flash('用户更新成功')
         else:
-            flash('用户已存在')
-    return render_template('admin.html')
+            # 创建新用户
+            if not current_app.db.users.find_one({'username': username}):
+                current_app.db.users.insert_one({
+                    'username': username,
+                    'password': password,
+                    'is_admin': is_admin,
+                    'created_at': datetime.now(),
+                    'status': '正常'  # 添加状态字段
+                })
+                flash('用户创建成功')
+            else:
+                flash('用户已存在')
+    
+    # 获取所有用户并添加默认值
+    users = list(current_app.db.users.find())
+    for user in users:
+        if 'created_at' not in user:
+            user['created_at'] = None
+        if 'status' not in user:
+            user['status'] = '正常'
+    
+    return render_template('admin.html', users=users)
+
+
+@bp.route('/admin/delete/<username>', methods=['POST'])
+def delete_user(username):
+    if not current_user.is_authenticated or not current_user.is_admin:
+        return jsonify({'success': False, 'message': '无权限'})
+    
+    if username == 'admin':
+        return jsonify({'success': False, 'message': '不能删除管理员账号'})
+    
+    current_app.db.users.delete_one({'username': username})
+    return jsonify({'success': True})
+
+
+@bp.route('/admin/reset_password/<username>', methods=['POST'])
+def reset_password(username):
+    if not current_user.is_authenticated or not current_user.is_admin:
+        return jsonify({'success': False, 'message': '无权限'})
+    
+    # 重置为默认密码
+    current_app.db.users.update_one(
+        {'username': username},
+        {'$set': {'password': '123456'}}
+    )
+    return jsonify({'success': True, 'message': f'用户 {username} 的密码已重置为: 123456'})
 
 
 @socketio.on('connect')

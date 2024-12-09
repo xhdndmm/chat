@@ -27,7 +27,11 @@ def create_app():
     def load_user(user_id):
         user_data = app.db.users.find_one({'username': user_id})
         if user_data:
-            return User(user_data['username'], user_data['password'])
+            return User(
+                user_data['username'], 
+                user_data['password'],
+                user_data.get('is_admin', False)  # 获取管理员标识，默认为 False
+            )
         return None
 
     return app
