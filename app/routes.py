@@ -462,14 +462,6 @@ def upload_sticker():
     
     return jsonify({'error': '不支持的文件类型'}), 400
 
-@bp.route('/search_gifs')
-@login_required
-def search_gifs():
-    query = request.args.get('q', '')
-    # 这里需要实现 GIF 搜索逻辑
-    # 可以使用 Giphy API 或其他服务
-    return jsonify([])
-
 @bp.route('/get_stickers')
 @login_required
 def get_stickers():
