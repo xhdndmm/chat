@@ -9,6 +9,7 @@ from datetime import datetime
 from bson import ObjectId
 import os
 from werkzeug.utils import secure_filename
+import time
 
 
 bp = Blueprint('main', __name__)
@@ -24,6 +25,16 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+AVATAR_FOLDER = 'app/static/avatars'
+ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# 确保头像目录存在
+os.makedirs(AVATAR_FOLDER, exist_ok=True)
+
+def allowed_avatar(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -137,17 +148,22 @@ def reset_password(username):
 @socketio.on('connect')
 def handle_connect():
     if not current_user.is_authenticated:
-        return False  # 阻止未登录用户连接
+        return False
     messages = current_app.db.messages.find()
     for message in messages:
-        # 确保消息数据是字典格式
         if isinstance(message.get('message'), dict):
             msg_data = message['message']
+            # 如果消息没有头像URL，尝试从用户数据获取
+            if 'avatar_url' not in msg_data:
+                user_data = current_app.db.users.find_one({'username': msg_data['username']})
+                if user_data and 'avatar_url' in user_data:
+                    msg_data['avatar_url'] = user_data['avatar_url']
         else:
-            # 如果是旧格式的消息，转换为新格式
+            user_data = current_app.db.users.find_one({'username': current_user.username})
             msg_data = {
                 'text': message.get('message', ''),
                 'username': current_user.username,
+                'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
                 'timestamp': datetime.now().strftime('%H:%M')
             }
         emit('message', msg_data)
@@ -156,12 +172,16 @@ def handle_connect():
 @socketio.on('message')
 @login_required
 def handle_message(data):
+    # 获取最新的用户数据
+    user_data = current_app.db.users.find_one({'username': current_user.username})
+    avatar_url = user_data.get('avatar_url', current_user.avatar_url)
+    
     message_id = str(ObjectId())
     message_data = {
         'id': message_id,
         'text': data,
         'username': current_user.username,
-        'avatar_url': current_user.avatar_url,
+        'avatar_url': avatar_url,  # 使用最新的头像URL
         'timestamp': datetime.now().strftime('%H:%M'),
         'status': 'sent',
         'edited': False,
@@ -291,5 +311,63 @@ def upload_file():
         })
     
     return jsonify({'error': 'File type not allowed'}), 400
+
+
+@bp.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if request.method == 'POST':
+        # 处理头像上传
+        if 'avatar' in request.files:
+            file = request.files['avatar']
+            if file and allowed_avatar(file.filename):
+                filename = secure_filename(f"{current_user.username}_{int(time.time())}.jpg")
+                filepath = os.path.join(AVATAR_FOLDER, filename)
+                file.save(filepath)
+                avatar_url = url_for('static', filename=f'avatars/{filename}')
+                
+                # 更新用户头像
+                current_app.db.users.update_one(
+                    {'username': current_user.username},
+                    {'$set': {'avatar_url': avatar_url}}
+                )
+                # 更新当前用户对象的头像URL
+                current_user.avatar_url = avatar_url
+
+        # 更新用户设置
+        settings = {
+            'theme': request.form.get('theme', 'light'),
+            'notification': request.form.get('notification') == 'on',
+            'display_name': request.form.get('display_name', current_user.username),
+            'bio': request.form.get('bio', ''),
+            'email': request.form.get('email', '')
+        }
+        
+        current_app.db.users.update_one(
+            {'username': current_user.username},
+            {'$set': {'settings': settings}}
+        )
+        
+        flash('设置已更新')
+        return redirect(url_for('main.settings'))
+        
+    # GET 请求显示设置页面
+    user_data = current_app.db.users.find_one({'username': current_user.username})
+    if not user_data.get('settings'):
+        # 如果用户没有设置，添加默认设置
+        user_data['settings'] = {
+            'theme': 'light',
+            'notification': True,
+            'display_name': user_data['username'],
+            'bio': '',
+            'email': ''
+        }
+        # 保存默认设置到数据库
+        current_app.db.users.update_one(
+            {'username': current_user.username},
+            {'$set': {'settings': user_data['settings']}}
+        )
+    
+    return render_template('settings.html', user=user_data)
 
 
