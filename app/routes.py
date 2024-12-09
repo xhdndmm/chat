@@ -11,6 +11,7 @@ import os
 from werkzeug.utils import secure_filename
 import time
 from config.log_config import logger
+from functools import wraps
 
 
 bp = Blueprint('main', __name__)
@@ -36,6 +37,17 @@ os.makedirs(AVATAR_FOLDER, exist_ok=True)
 def allowed_avatar(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
+
+
+# 添加管理员验证装饰器
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash('您没有权限访问此页面')
+            return redirect(url_for('main.login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -73,11 +85,9 @@ def index():
 
 
 @bp.route('/admin', methods=['GET', 'POST'])
+@login_required
+@admin_required  # 添加管理员验证
 def admin():
-    if not current_user.is_authenticated or not current_user.is_admin:
-        flash('只有管理员可以访问此页面')
-        return redirect(url_for('main.login'))
-        
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -104,28 +114,20 @@ def admin():
                     'password': password,
                     'is_admin': is_admin,
                     'created_at': datetime.now(),
-                    'status': '正常'  # 添加状态字段
+                    'status': '正常'
                 })
                 flash('用户创建成功')
             else:
                 flash('用户已存在')
     
-    # 获取所有用户并添加默认值
     users = list(current_app.db.users.find())
-    for user in users:
-        if 'created_at' not in user:
-            user['created_at'] = None
-        if 'status' not in user:
-            user['status'] = '正常'
-    
     return render_template('admin.html', users=users)
 
 
 @bp.route('/admin/delete/<username>', methods=['POST'])
+@login_required
+@admin_required  # 添加管理员验证
 def delete_user(username):
-    if not current_user.is_authenticated or not current_user.is_admin:
-        return jsonify({'success': False, 'message': '无权限'})
-    
     if username == 'admin':
         return jsonify({'success': False, 'message': '不能删除管理员账号'})
     
@@ -134,11 +136,9 @@ def delete_user(username):
 
 
 @bp.route('/admin/reset_password/<username>', methods=['POST'])
+@login_required
+@admin_required  # 添加管理员验证
 def reset_password(username):
-    if not current_user.is_authenticated or not current_user.is_admin:
-        return jsonify({'success': False, 'message': '无权限'})
-    
-    # 重置为默认密码
     current_app.db.users.update_one(
         {'username': username},
         {'$set': {'password': '123456'}}
@@ -359,10 +359,8 @@ def settings():
             else:
                 flash('请选择要上传的文件')
 
-        # 处理其他设置的更新
+        # 更新用户设置
         settings = {
-            'theme': request.form.get('theme', 'light'),
-            'notification': request.form.get('notification') == 'on',
             'display_name': request.form.get('display_name', current_user.username),
             'bio': request.form.get('bio', ''),
             'email': request.form.get('email', '')
@@ -394,5 +392,10 @@ def user_info(username):
             'bio': settings.get('bio', ''),
         })
     return jsonify({'error': 'User not found'}), 404
+
+
+@bp.route('/contact_admin')
+def contact_admin():
+    return render_template('contact_admin.html')
 
 

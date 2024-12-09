@@ -9,47 +9,84 @@
 </head>
 <body>
     <div class="admin-container">
-        <div class="header">
-            <h1>用户管理</h1>
-            <button class="add-btn" onclick="showAddModal()">添加用户</button>
+        <div class="admin-header">
+            <div class="header-left">
+                <h1>用户管理</h1>
+                <span class="user-count">共 {{ users|length }} 个用户</span>
+            </div>
+            <div class="header-right">
+                <button class="add-btn" onclick="showAddModal()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    添加用户
+                </button>
+            </div>
         </div>
-        
-        <table class="user-table">
-            <thead>
-                <tr>
-                    <th>序号</th>
-                    <th>用户名</th>
-                    <th>密码</th>
-                    <th>角色</th>
-                    <th>状态</th>
-                    <th>创建时间</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>{{ user.username }}</td>
-                    <td>******</td>
-                    <td>{{ '管理员' if user.is_admin else '普通用户' }}</td>
-                    <td>正常</td>
-                    <td>{{ user.get('created_at', '').strftime('%Y-%m-%d %H:%M:%S') if user.get('created_at') else '未知' }}</td>
-                    <td class="actions">
-                        <button class="edit-btn" onclick="showEditModal('{{ user.username }}')">编辑</button>
-                        <button class="reset-btn" onclick="resetPassword('{{ user.username }}')">重置密码</button>
-                        <button class="delete-btn" onclick="deleteUser('{{ user.username }}')">删除</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+        <div class="table-container">
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>用户名</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="user-info">
+                            <img src="{{ user.get('avatar_url', url_for('static', filename='images/default-avatar.png')) }}" 
+                                 alt="{{ user.username }}" class="user-avatar">
+                            <span>{{ user.username }}</span>
+                        </td>
+                        <td>
+                            <span class="role-badge {% if user.is_admin %}admin{% else %}user{% endif %}">
+                                {{ '管理员' if user.is_admin else '普通用户' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge">{{ user.get('status', '正常') }}</span>
+                        </td>
+                        <td>{{ user.get('created_at', '').strftime('%Y-%m-%d %H:%M:%S') if user.get('created_at') else '未知' }}</td>
+                        <td class="actions">
+                            <button class="action-btn edit" onclick="showEditModal('{{ user.username }}')" title="编辑">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                </svg>
+                            </button>
+                            <button class="action-btn reset" onclick="resetPassword('{{ user.username }}')" title="重置密码">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+                                </svg>
+                            </button>
+                            {% if not user.is_admin %}
+                            <button class="action-btn delete" onclick="deleteUser('{{ user.username }}')" title="删除">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- 添加/编辑用户模态框 -->
     <div id="userModal" class="modal">
         <div class="modal-content">
-            <h2 id="modalTitle">添加用户</h2>
+            <div class="modal-header">
+                <h2 id="modalTitle">添加用户</h2>
+                <button class="close-btn" onclick="hideModal()">&times;</button>
+            </div>
             <form id="userForm" method="post">
                 <input type="hidden" id="editUsername" name="editUsername">
                 <div class="form-group">
@@ -60,14 +97,15 @@
                     <label for="password">密码</label>
                     <input type="password" id="password" name="password" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group checkbox">
                     <label>
-                        <input type="checkbox" name="is_admin"> 设为管理员
+                        <input type="checkbox" name="is_admin">
+                        <span>设为管理员</span>
                     </label>
                 </div>
-                <div class="modal-buttons">
-                    <button type="submit">保存</button>
-                    <button type="button" onclick="hideModal()">取消</button>
+                <div class="modal-footer">
+                    <button type="submit" class="submit-btn">保存</button>
+                    <button type="button" class="cancel-btn" onclick="hideModal()">取消</button>
                 </div>
             </form>
         </div>
@@ -113,6 +151,13 @@
                     .then(data => {
                         alert(data.message);
                     });
+            }
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('userModal')) {
+                hideModal();
             }
         }
     </script>

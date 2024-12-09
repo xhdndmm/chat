@@ -1,74 +1,145 @@
 :root {
-    --primary-color: #1e3799;
-    --secondary-color: #4a69bd;
-    --background-color: #f1f2f6;
-    --text-color: #2f3542;
-    --border-color: #dfe4ea;
+    --primary-color: #00a884;
+    --danger-color: #ff4d4f;
+    --success-color: #52c41a;
+    --warning-color: #faad14;
+    --text-color: #111b21;
+    --border-color: #e9edef;
+    --bg-color: #f0f2f5;
+    --header-height: 64px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
     font-family: 'Noto Sans SC', sans-serif;
-    margin: 0;
-    padding: 20px;
-    background-color: var(--background-color);
+    background-color: var(--bg-color);
     color: var(--text-color);
+    min-height: 100vh;
 }
 
 .admin-container {
     max-width: 1200px;
     margin: 0 auto;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+    padding: 24px;
 }
 
-.header {
+.admin-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+}
+
+.header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
 }
 
 h1 {
-    margin: 0;
-    color: var(--primary-color);
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.user-count {
+    color: #666;
+    font-size: 14px;
 }
 
 .add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     background-color: var(--primary-color);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
+    padding: 8px 16px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.add-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
 }
 
 .add-btn:hover {
-    background-color: var(--secondary-color);
+    background-color: #008f6c;
+}
+
+.table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
 }
 
 .user-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
 }
 
 .user-table th,
 .user-table td {
-    padding: 12px;
+    padding: 16px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
 }
 
 .user-table th {
-    background-color: var(--primary-color);
-    color: white;
+    background-color: #fafafa;
+    font-weight: 500;
+    font-size: 14px;
+    color: #666;
 }
 
-.user-table tr:nth-child(even) {
-    background-color: #f8f9fa;
+.user-table tr:hover {
+    background-color: #fafafa;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.role-badge,
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.role-badge.admin {
+    background-color: #e6f7ff;
+    color: #1890ff;
+}
+
+.role-badge.user {
+    background-color: #f6ffed;
+    color: #52c41a;
+}
+
+.status-badge {
+    background-color: #f6ffed;
+    color: #52c41a;
 }
 
 .actions {
@@ -76,35 +147,39 @@ h1 {
     gap: 8px;
 }
 
-.edit-btn,
-.reset-btn,
-.delete-btn {
-    padding: 6px 12px;
+.action-btn {
+    width: 32px;
+    height: 32px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    transition: opacity 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    background: none;
 }
 
-.edit-btn {
-    background-color: #4834d4;
-    color: white;
+.action-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
 }
 
-.reset-btn {
-    background-color: #686de0;
-    color: white;
+.action-btn.edit {
+    color: var(--primary-color);
 }
 
-.delete-btn {
-    background-color: #eb4d4b;
-    color: white;
+.action-btn.reset {
+    color: var(--warning-color);
 }
 
-.edit-btn:hover,
-.reset-btn:hover,
-.delete-btn:hover {
-    opacity: 0.8;
+.action-btn.delete {
+    color: var(--danger-color);
+}
+
+.action-btn:hover {
+    background-color: rgba(0, 0, 0, 0.04);
 }
 
 /* 模态框样式 */
@@ -118,14 +193,51 @@ h1 {
     background-color: rgba(0, 0, 0, 0.5);
     justify-content: center;
     align-items: center;
+    z-index: 1000;
 }
 
 .modal-content {
-    background-color: white;
-    padding: 30px;
-    border-radius: 8px;
-    width: 100%;
-    max-width: 400px;
+    background: white;
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90%;
+}
+
+.modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #666;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #333;
+}
+
+.modal form {
+    padding: 24px;
 }
 
 .form-group {
@@ -135,38 +247,83 @@ h1 {
 .form-group label {
     display: block;
     margin-bottom: 8px;
-    color: var(--text-color);
+    color: #666;
+    font-size: 14px;
 }
 
 .form-group input[type="text"],
 .form-group input[type="password"] {
     width: 100%;
-    padding: 8px;
+    padding: 8px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
-    box-sizing: border-box;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.2s;
 }
 
-.modal-buttons {
+.form-group input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.2);
+}
+
+.checkbox {
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+    align-items: center;
+    gap: 8px;
 }
 
-.modal-buttons button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
+.checkbox label {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     cursor: pointer;
 }
 
-.modal-buttons button[type="submit"] {
-    background-color: var(--primary-color);
-    color: white;
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
 }
 
-.modal-buttons button[type="button"] {
-    background-color: #dfe4ea;
-    color: var(--text-color);
+.submit-btn,
+.cancel-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.submit-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+}
+
+.submit-btn:hover {
+    background-color: #008f6c;
+}
+
+.cancel-btn {
+    background-color: white;
+    color: #666;
+    border: 1px solid var(--border-color);
+}
+
+.cancel-btn:hover {
+    background-color: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+    .admin-container {
+        padding: 16px;
+    }
+
+    .user-table th:nth-child(4),
+    .user-table td:nth-child(4) {
+        display: none;
+    }
 } 
