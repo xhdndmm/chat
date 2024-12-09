@@ -19,7 +19,24 @@ bp = Blueprint('main', __name__)
 
 # 配置文件上传
 UPLOAD_FOLDER = 'app/static/uploads'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {
+    # 文本文件
+    'txt', 'log', 'md',
+    # 数据文件
+    'json', 'xml', 'yaml', 'yml',
+    # 网页文件
+    'html', 'htm', 'css', 'js',
+    # 文档文件
+    'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf',
+    # 压缩文件
+    'zip', 'rar', '7z', 'tar', 'gz',
+    # 图片文件
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
+    # 视频文件
+    'mp4', 'webm', 'avi', 'mov', 'wmv', 'flv', 'm4v',
+    # 代码文件
+    'py', 'java', 'cpp', 'c', 'h', 'cs', 'php', 'sql'
+}
 
 # 确保上传目录存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -175,7 +192,7 @@ def handle_connect():
 def handle_message(data):
     # 获取最新的用户数据
     user_data = current_app.db.users.find_one({'username': current_user.username})
-    avatar_url = user_data.get('avatar_url', current_user.avatar_url)
+    avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
     
     message_id = str(ObjectId())
     message_data = {
@@ -273,31 +290,39 @@ def handle_typing(data):
 @login_required
 def upload_file():
     if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+        return jsonify({'error': '没有文件被上传'}), 400
     
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+        return jsonify({'error': '未选择文件'}), 400
         
     if file and allowed_file(file.filename):
+        # 获取文件大小
+        file.seek(0, 2)
+        file_size = file.tell()
+        file.seek(0)
+        
         filename = secure_filename(file.filename)
-        # 使用时间戳避免文件名冲突
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
         filename = timestamp + filename
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(file_path)
         
-        # 获取文件URL
         file_url = url_for('static', filename=f'uploads/{filename}')
         
-        # 创建文件消息
+        # 获取最新的用户数据和头像URL
+        user_data = current_app.db.users.find_one({'username': current_user.username})
+        avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
+        
         message_id = str(ObjectId())
         message_data = {
             'id': message_id,
             'type': 'file',
             'filename': file.filename,
             'url': file_url,
+            'size': file_size,
             'username': current_user.username,
+            'avatar_url': avatar_url,  # 添加头像URL
             'timestamp': datetime.now().strftime('%H:%M'),
             'status': 'sent'
         }
@@ -308,10 +333,11 @@ def upload_file():
         return jsonify({
             'success': True,
             'file_url': file_url,
-            'filename': file.filename
+            'filename': file.filename,
+            'size': file_size
         })
     
-    return jsonify({'error': 'File type not allowed'}), 400
+    return jsonify({'error': '不支持的文件类型'}), 400
 
 
 @bp.route('/settings', methods=['GET', 'POST'])
@@ -385,10 +411,12 @@ def user_info(username):
     user_data = current_app.db.users.find_one({'username': username})
     if user_data:
         settings = user_data.get('settings', {})
+        # 使用用户的实际头像URL，如果没有则使用默认头像
+        avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}")
         return jsonify({
             'username': user_data['username'],
             'display_name': settings.get('display_name', user_data['username']),
-            'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"),
+            'avatar_url': avatar_url,
             'bio': settings.get('bio', ''),
         })
     return jsonify({'error': 'User not found'}), 404
