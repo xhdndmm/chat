@@ -343,14 +343,25 @@ body {
 
 .message-info {
     display: flex;
-    gap: 8px;
-    font-size: 11px;
-    color: #707579;
+    align-items: center;
+    gap: 4px;
     margin-top: 2px;
+    font-size: 11px;
+    color: #8696a0;
+}
+
+.message-time {
+    font-size: 11px;
+    color: #8696a0;
 }
 
 .message-edited {
-    color: #707579;
+    color: #8696a0;
+}
+
+/* 为自己发送的消息右对齐时间 */
+.message-own .message-info {
+    justify-content: flex-end;
 }
 
 .message-status {
@@ -778,5 +789,49 @@ body {
 /* 移除原有的编辑删除按钮样式 */
 .message-actions {
     display: none;
+}
+
+/* 开发团队样式 */
+.dev-team {
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+}
+
+.dev-team h3 {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.dev-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dev-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    text-decoration: none;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.dev-link:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
+}
+
+.dev-link svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
 }
  
