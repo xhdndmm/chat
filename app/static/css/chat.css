@@ -700,37 +700,114 @@ body {
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-    padding: 12px;
     z-index: 9999;
 }
 
-.emoji-container {
-    max-height: 200px;
-    overflow-y: auto;
-    padding: 4px;
+.emoji-tabs {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.emoji-group {
+.tab-button {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.tab-button.active {
+    background-color: rgba(0, 168, 132, 0.1);
+    color: var(--primary-color);
+}
+
+.tab-contents {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.tab-content {
+    display: none !important;  /* 强制隐藏 */
+}
+
+.tab-content.active {
+    display: block !important;  /* 强制显示 */
+}
+
+/* 贴纸容器样式 */
+.sticker-container {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.sticker-container img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    border: 1px solid var(--border-color);
+}
+
+.sticker-container img:hover {
+    transform: scale(1.05);
+}
+
+/* 贴纸上传区域样式 */
+.sticker-upload {
+    padding: 12px;
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+}
+
+.sticker-upload button {
+    padding: 8px 16px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.sticker-upload button:hover {
+    background-color: #008f6c;
+}
+
+/* GIF 搜索区域��式 */
+.gif-search {
+    margin-bottom: 12px;
+}
+
+.gif-search input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.gif-results {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
-.emoji {
-    font-size: 24px;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.gif-results img {
+    width: 100%;
+    height: auto;
     cursor: pointer;
     border-radius: 4px;
-    transition: background-color 0.2s;
-    user-select: none;
-}
-
-.emoji:hover {
-    background-color: rgba(0, 0, 0, 0.05);
 }
 
 /* 开发团队样式 */
@@ -975,5 +1052,123 @@ body {
 
 .video-preview::-webkit-media-controls-panel {
     padding: 0 8px;
+}
+
+/* 贴纸上传框样式 */
+.sticker-upload-box {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.sticker-upload-box:hover {
+    border-color: var(--primary-color);
+    background: rgba(0, 168, 132, 0.05);
+}
+
+.upload-icon-large {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+}
+
+.upload-icon-large svg {
+    width: 100%;
+    height: 100%;
+    fill: #666;
+}
+
+.sticker-upload-box:hover .upload-icon-large svg {
+    fill: var(--primary-color);
+}
+
+.sticker-upload-box span {
+    font-size: 12px;
+    color: #666;
+}
+
+.sticker-upload-box:hover span {
+    color: var(--primary-color);
+}
+
+/* 贴纸消息样式 */
+.message-content.sticker-message {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+}
+
+.sticker-message::before {
+    display: none; /* 移除气泡尾巴 */
+}
+
+.sticker-image {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.sticker-image:hover {
+    transform: scale(1.05);
+}
+
+/* 贴纸包装器样式 */
+.sticker-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+.sticker-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    border: 1px solid var(--border-color);
+}
+
+.sticker-wrapper img:hover {
+    transform: scale(1.05);
+}
+
+/* 删除按钮样式 */
+.sticker-delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ff4d4f;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 1;
+}
+
+.sticker-wrapper:hover .sticker-delete-btn {
+    opacity: 1;
+}
+
+.sticker-delete-btn:hover {
+    background: #ff7875;
 }
  
