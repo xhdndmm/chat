@@ -10,6 +10,7 @@ from bson import ObjectId
 import os
 from werkzeug.utils import secure_filename
 import time
+from config.log_config import logger
 
 
 bp = Blueprint('main', __name__)
@@ -26,7 +27,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-AVATAR_FOLDER = 'app/static/avatars'
+AVATAR_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'avatars')
 ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # 确保头像目录存在
@@ -320,21 +321,45 @@ def settings():
         # 处理头像上传
         if 'avatar' in request.files:
             file = request.files['avatar']
-            if file and allowed_avatar(file.filename):
-                filename = secure_filename(f"{current_user.username}_{int(time.time())}.jpg")
-                filepath = os.path.join(AVATAR_FOLDER, filename)
-                file.save(filepath)
-                avatar_url = url_for('static', filename=f'avatars/{filename}')
-                
-                # 更新用户头像
-                current_app.db.users.update_one(
-                    {'username': current_user.username},
-                    {'$set': {'avatar_url': avatar_url}}
-                )
-                # 更新当前用户对象的头像URL
-                current_user.avatar_url = avatar_url
+            if file and file.filename:  # 检查是否有选择文件
+                if allowed_avatar(file.filename):
+                    # 确保头像目录存在
+                    os.makedirs(AVATAR_FOLDER, exist_ok=True)
+                    
+                    # 生成唯一的文件名
+                    filename = secure_filename(f"{current_user.username}_{int(time.time())}.jpg")
+                    filepath = os.path.join(AVATAR_FOLDER, filename)
+                    
+                    try:
+                        # 保存文件
+                        file.save(filepath)
+                        logger.info(f"头像上传成功: {filename}")
+                        # 生成URL
+                        avatar_url = url_for('static', filename=f'avatars/{filename}')
+                        
+                        # 更新用户头像
+                        current_app.db.users.update_one(
+                            {'username': current_user.username},
+                            {'$set': {'avatar_url': avatar_url}}
+                        )
 
-        # 更新用户设置
+                        # 更新所有消息中的头像URL
+                        current_app.db.messages.update_many(
+                            {'message.username': current_user.username},
+                            {'$set': {'message.avatar_url': avatar_url}}
+                        )
+                        
+                        flash('头像更新成功')
+                        return redirect(url_for('main.settings'))
+                    except Exception as e:
+                        logger.error(f"头像上传失败: {str(e)}")
+                        flash('头像上传失败，请重试')
+                else:
+                    flash('不支持的文件格式')
+            else:
+                flash('请选择要上传的文件')
+
+        # 处理其他设置的更新
         settings = {
             'theme': request.form.get('theme', 'light'),
             'notification': request.form.get('notification') == 'on',
@@ -353,21 +378,21 @@ def settings():
         
     # GET 请求显示设置页面
     user_data = current_app.db.users.find_one({'username': current_user.username})
-    if not user_data.get('settings'):
-        # 如果用户没有设置，添加默认设置
-        user_data['settings'] = {
-            'theme': 'light',
-            'notification': True,
-            'display_name': user_data['username'],
-            'bio': '',
-            'email': ''
-        }
-        # 保存默认设置到数据库
-        current_app.db.users.update_one(
-            {'username': current_user.username},
-            {'$set': {'settings': user_data['settings']}}
-        )
-    
     return render_template('settings.html', user=user_data)
+
+
+@bp.route('/user_info/<username>')
+@login_required
+def user_info(username):
+    user_data = current_app.db.users.find_one({'username': username})
+    if user_data:
+        settings = user_data.get('settings', {})
+        return jsonify({
+            'username': user_data['username'],
+            'display_name': settings.get('display_name', user_data['username']),
+            'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"),
+            'bio': settings.get('bio', ''),
+        })
+    return jsonify({'error': 'User not found'}), 404
 
 

@@ -110,7 +110,50 @@
         </div>
     </div>
 
+    <!-- 个人信息弹窗 -->
+    <div id="userInfoModal" class="modal">
+        <div class="modal-content user-info-modal">
+            <div class="modal-header">
+                <h3>用户信息</h3>
+                <span class="close-btn" onclick="closeUserInfoModal()">&times;</span>
+            </div>
+            <div class="user-info-content">
+                <img id="userInfoAvatar" src="" alt="用户头像" class="user-info-avatar">
+                <div class="info-group">
+                    <div class="info-item">
+                        <span class="label">用户名</span>
+                        <span id="userInfoUsername"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">显示名称</span>
+                        <span id="userInfoDisplayName"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">个人简介</span>
+                        <span id="userInfoBio"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息右键菜单 -->
+    <div id="contextMenu" class="context-menu">
+        <ul>
+            <li id="editMenuItem">编辑消息</li>
+            <li id="deleteMenuItem">删除消息</li>
+        </ul>
+    </div>
+
     <script>
+        // 定义全局函数
+        function closeUserInfoModal() {
+            const modal = document.getElementById('userInfoModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const socket = io();
             const form = document.getElementById('message-form');
@@ -119,18 +162,25 @@
             const currentUsername = '{{ current_user.username }}';
             const fileInput = document.getElementById('file-input');
 
+            // 添加右键菜单相关变量
+            const contextMenu = document.getElementById('contextMenu');
+            const editMenuItem = document.getElementById('editMenuItem');
+            const deleteMenuItem = document.getElementById('deleteMenuItem');
+            let currentMessageId = null;
+
             function appendMessage(msgData) {
                 const messageDiv = document.createElement('div');
                 const isOwn = msgData.username === currentUsername;
                 messageDiv.className = `message ${isOwn ? 'message-own' : 'message-other'}`;
                 messageDiv.setAttribute('data-message-id', msgData.id);
 
-                // 添加头像
+                // 添加头像点击事件
                 const avatarDiv = document.createElement('div');
                 avatarDiv.className = 'message-avatar';
                 const avatarImg = document.createElement('img');
                 avatarImg.src = msgData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msgData.username}`;
                 avatarImg.alt = msgData.username;
+                avatarImg.onclick = () => showUserInfo(msgData.username);
                 avatarDiv.appendChild(avatarImg);
                 messageDiv.appendChild(avatarDiv);
 
@@ -184,29 +234,19 @@
                     contentDiv.textContent = msgData.text;
                 }
 
-                // 如果是自己的消息，添加编辑和删除按钮
-                if (isOwn) {
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.className = 'message-actions';
-                    
-                    const editBtn = document.createElement('button');
-                    editBtn.className = 'action-btn edit-btn';
-                    editBtn.innerHTML = '✎';
-                    editBtn.onclick = () => editMessage(msgData.id);
-
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'action-btn delete-btn';
-                    deleteBtn.innerHTML = '×';
-                    deleteBtn.onclick = () => deleteMessage(msgData.id);
-
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(deleteBtn);
-                    contentWrapper.appendChild(actionsDiv);
-                }
-
                 contentWrapper.appendChild(contentDiv);
                 contentContainer.appendChild(contentWrapper);
                 messageDiv.appendChild(contentContainer);
+
+                // 为消息添加右键菜单事件（仅限自己的消息）
+                if (isOwn) {
+                    messageDiv.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        currentMessageId = msgData.id;
+                        showContextMenu(e.pageX, e.pageY);
+                    });
+                }
+
                 messages.appendChild(messageDiv);
                 messages.scrollTop = messages.scrollHeight;
             }
@@ -422,6 +462,59 @@
                     // 关闭表情面板
                     emojiPanel.style.display = 'none';
                 });
+            });
+
+            // 显示用户信息弹窗
+            async function showUserInfo(username) {
+                const userInfoModal = document.getElementById('userInfoModal');
+                try {
+                    const response = await fetch(`/user_info/${username}`);
+                    const userData = await response.json();
+                    
+                    document.getElementById('userInfoAvatar').src = userData.avatar_url;
+                    document.getElementById('userInfoUsername').textContent = userData.username;
+                    document.getElementById('userInfoDisplayName').textContent = userData.display_name || userData.username;
+                    document.getElementById('userInfoBio').textContent = userData.bio || '这个用户很懒，还没有填写简介';
+                    
+                    userInfoModal.style.display = 'flex';
+                } catch (error) {
+                    console.error('获取用户信息失败:', error);
+                }
+            }
+
+            // 显示右键菜单
+            function showContextMenu(x, y) {
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${x}px`;
+                contextMenu.style.top = `${y}px`;
+            }
+
+            // 隐藏右键菜单
+            function hideContextMenu() {
+                contextMenu.style.display = 'none';
+            }
+
+            // 右键菜单点击事件
+            editMenuItem.addEventListener('click', () => {
+                if (currentMessageId) {
+                    editMessage(currentMessageId);
+                    hideContextMenu();
+                }
+            });
+
+            deleteMenuItem.addEventListener('click', () => {
+                if (currentMessageId) {
+                    deleteMessage(currentMessageId);
+                    hideContextMenu();
+                }
+            });
+
+            // 点击其他地方关闭右键菜单
+            document.addEventListener('click', hideContextMenu);
+
+            // 阻止右键菜单冒泡
+            contextMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
             });
         });
     </script>
