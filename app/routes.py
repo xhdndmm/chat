@@ -15,12 +15,18 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        print(f"尝试登录: {username}")  # 调试日志
+        
         user_data = current_app.db.users.find_one({'username': username})
+        print(f"数据库查询结果: {user_data}")  # 调试日志
+        
         if user_data:
             user = User(user_data['username'], user_data['password'])
             if user.check_password(password):
+                print("密码验证成功")  # 调试日志
                 login_user(user)
                 return redirect(url_for('main.index'))
+            print("密码验证失败")  # 调试日志
         flash('用户名或密码错误')
     return render_template('login.html')
 

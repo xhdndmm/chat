@@ -25,7 +25,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        user_data = app.db.users.find_one({'_id': user_id})
+        user_data = app.db.users.find_one({'username': user_id})
         if user_data:
             return User(user_data['username'], user_data['password'])
         return None
