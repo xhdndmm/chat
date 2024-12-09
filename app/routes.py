@@ -18,7 +18,7 @@ bp = Blueprint('main', __name__)
 
 
 # 配置文件上传
-UPLOAD_FOLDER = 'app/static/uploads'
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'uploads')
 ALLOWED_EXTENSIONS = {
     # 文本文件
     'txt', 'log', 'md',
@@ -190,7 +190,7 @@ def handle_connect():
 @socketio.on('message')
 @login_required
 def handle_message(data):
-    # 获取最新的用户数据
+    logger.info(f'Handling message from {current_user.username}: {data}')  # 添加日志
     user_data = current_app.db.users.find_one({'username': current_user.username})
     avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
     
@@ -199,19 +199,19 @@ def handle_message(data):
         'id': message_id,
         'text': data,
         'username': current_user.username,
-        'avatar_url': avatar_url,  # 使用最新的头像URL
+        'avatar_url': avatar_url,
         'timestamp': datetime.now().strftime('%H:%M'),
         'status': 'sent',
         'edited': False,
         'type': 'text'
     }
-    current_app.db.messages.insert_one({'message': message_data})
-    emit('message', message_data, broadcast=True)
-    # 发送确认消息给发送者
-    emit('message_status', {
-        'id': message_id,
-        'status': 'delivered'
-    }, room=request.sid)
+    
+    try:
+        current_app.db.messages.insert_one({'message': message_data})
+        emit('message', message_data, broadcast=True)
+        logger.info(f'Message sent successfully: {message_id}')  # 添加日志
+    except Exception as e:
+        logger.error(f'Error sending message: {str(e)}')  # 添加错误日志
 
 
 @socketio.on('edit_message')
@@ -322,13 +322,13 @@ def upload_file():
             'url': file_url,
             'size': file_size,
             'username': current_user.username,
-            'avatar_url': avatar_url,  # 添加头像URL
+            'avatar_url': avatar_url,
             'timestamp': datetime.now().strftime('%H:%M'),
             'status': 'sent'
         }
         
         current_app.db.messages.insert_one({'message': message_data})
-        emit('message', message_data, broadcast=True, namespace='/')
+        socketio.emit('message', message_data, namespace='/')
         
         return jsonify({
             'success': True,
@@ -425,5 +425,92 @@ def user_info(username):
 @bp.route('/contact_admin')
 def contact_admin():
     return render_template('contact_admin.html')
+
+
+STICKER_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'stickers')
+os.makedirs(STICKER_FOLDER, exist_ok=True)
+
+@bp.route('/upload_sticker', methods=['POST'])
+@login_required
+def upload_sticker():
+    if 'sticker' not in request.files:
+        return jsonify({'error': '没有文件被上传'}), 400
+    
+    file = request.files['sticker']
+    if file.filename == '':
+        return jsonify({'error': '未选择文件'}), 400
+        
+    if allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+        filename = timestamp + filename
+        sticker_path = os.path.join(STICKER_FOLDER, filename)
+        file.save(sticker_path)
+        
+        # 保存贴纸信息到数据库
+        sticker_url = url_for('static', filename=f'stickers/{filename}')
+        current_app.db.stickers.insert_one({
+            'username': current_user.username,
+            'url': sticker_url,
+            'created_at': datetime.now()
+        })
+        
+        return jsonify({
+            'success': True,
+            'url': sticker_url
+        })
+    
+    return jsonify({'error': '不支持的文件类型'}), 400
+
+@bp.route('/search_gifs')
+@login_required
+def search_gifs():
+    query = request.args.get('q', '')
+    # 这里需要实现 GIF 搜索逻辑
+    # 可以使用 Giphy API 或其他服务
+    return jsonify([])
+
+@bp.route('/get_stickers')
+@login_required
+def get_stickers():
+    try:
+        stickers = list(current_app.db.stickers.find(
+            {'username': current_user.username},
+            {'_id': 0, 'url': 1}
+        ))
+        logger.info(f'Retrieved {len(stickers)} stickers for user {current_user.username}')
+        return jsonify(stickers)
+    except Exception as e:
+        logger.error(f'Error getting stickers: {str(e)}')
+        return jsonify([])
+
+@bp.route('/delete_sticker', methods=['POST'])
+@login_required
+def delete_sticker():
+    url = request.json.get('url')
+    if not url:
+        return jsonify({'error': '未指定贴纸'}), 400
+    
+    try:
+        # 从数据库中删除贴纸记录
+        result = current_app.db.stickers.delete_one({
+            'username': current_user.username,
+            'url': url
+        })
+        
+        if result.deleted_count > 0:
+            # 从文件系统中删除贴纸文件
+            filename = url.split('/')[-1]
+            file_path = os.path.join(STICKER_FOLDER, filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': '贴纸不存在或无权删除'}), 404
+            
+    except Exception as e:
+        logger.error(f'Error deleting sticker: {str(e)}')
+        return jsonify({'error': '删除贴纸失败'}), 500
 
 
