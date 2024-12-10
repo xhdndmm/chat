@@ -198,6 +198,19 @@
         </ul>
     </div>
 
+    <!-- 修改贴纸预览模态框 -->
+    <div id="stickerPreviewModal" class="modal sticker-preview-modal">
+        <div class="modal-content">
+            <div class="preview-header">
+                <h3>贴纸包预览</h3>
+                <span class="close-preview">&times;</span>
+            </div>
+            <div class="preview-grid" id="previewGrid">
+                <!-- 贴纸将在这里动态加载 -->
+            </div>
+        </div>
+    </div>
+
     <script>
         // 定义全局函数
         function closeUserInfoModal() {
@@ -557,6 +570,8 @@
                     const img = document.createElement('img');
                     img.src = stickerUrl;
                     img.className = 'sticker-image';
+                    // 添加点击事件
+                    img.onclick = () => showStickerPreview(stickerUrl);
                     contentDiv.appendChild(img);
                 } else if (msgData.type === 'file') {
                     // 文件消息处理
@@ -896,6 +911,62 @@
                 const sizes = ['B', 'KB', 'MB', 'GB'];
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // 修改贴纸预览函数
+            async function showStickerPreview(url) {
+                const modal = document.getElementById('stickerPreviewModal');
+                const grid = document.getElementById('previewGrid');
+                grid.innerHTML = ''; // 清空现有内容
+                
+                try {
+                    // 从URL中提取贴纸包名称
+                    const packName = url.split('/').pop().split('_')[2];
+                    
+                    // 获取贴纸包内容
+                    const response = await fetch('/get_sticker_packs');
+                    const packs = await response.json();
+                    
+                    // 找到对应的贴纸包
+                    const pack = packs.find(p => p.stickers.includes(url));
+                    
+                    if (pack) {
+                        // 显示贴纸包中的所有贴纸
+                        pack.stickers.forEach(stickerUrl => {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'preview-sticker-wrapper';
+                            
+                            const img = document.createElement('img');
+                            img.src = stickerUrl;
+                            img.className = 'preview-sticker';
+                            img.onclick = () => {
+                                // 点击贴纸时发送该贴纸
+                                const socket = io();
+                                socket.emit('message', `[sticker]${stickerUrl}[/sticker]`);
+                            };
+                            
+                            wrapper.appendChild(img);
+                            grid.appendChild(wrapper);
+                        });
+                        
+                        modal.style.display = 'flex';
+                    }
+                } catch (error) {
+                    console.error('加载贴纸包预览失败:', error);
+                }
+            }
+
+            // 关闭预览
+            document.querySelector('.close-preview').onclick = function() {
+                document.getElementById('stickerPreviewModal').style.display = 'none';
+            }
+
+            // 点击模态框外部关闭
+            window.onclick = function(event) {
+                const modal = document.getElementById('stickerPreviewModal');
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
             }
         });
     </script>

@@ -1251,3 +1251,65 @@ body {
 .sticker-delete-btn:hover {
     background: #ff7875;
 }
+
+/* 修改贴纸预览模态框样式 */
+.sticker-preview-modal .modal-content {
+    background: white;
+    width: 360px;
+    max-height: 80vh;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.preview-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.preview-grid {
+    padding: 12px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    flex: 1;
+}
+
+.preview-sticker-wrapper {
+    aspect-ratio: 1;
+    padding: 4px;
+}
+
+.preview-sticker {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.preview-sticker:hover {
+    transform: scale(1.1);
+}
+
+.close-preview {
+    cursor: pointer;
+    font-size: 24px;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.close-preview:hover {
+    color: var(--text-color);
+}
