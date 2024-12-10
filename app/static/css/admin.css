@@ -326,4 +326,18 @@ h1 {
     .user-table td:nth-child(4) {
         display: none;
     }
+}
+
+.import-btn {
+    background-color: #00a884;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.import-btn:hover {
+    background-color: #008f6c;
 } 

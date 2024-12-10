@@ -12,6 +12,8 @@ from werkzeug.utils import secure_filename
 import time
 from config.log_config import logger
 from functools import wraps
+import zipfile
+import io
 
 
 bp = Blueprint('main', __name__)
@@ -433,11 +435,15 @@ os.makedirs(STICKER_FOLDER, exist_ok=True)
 @bp.route('/upload_sticker', methods=['POST'])
 @login_required
 def upload_sticker():
+    logger.info('收到贴纸上传请求')
+    
     if 'sticker' not in request.files:
+        logger.error('没有文件被上传')
         return jsonify({'error': '没有文件被上传'}), 400
     
     file = request.files['sticker']
     if file.filename == '':
+        logger.error('未选择文件')
         return jsonify({'error': '未选择文件'}), 400
         
     if allowed_file(file.filename):
@@ -445,6 +451,8 @@ def upload_sticker():
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
         filename = timestamp + filename
         sticker_path = os.path.join(STICKER_FOLDER, filename)
+        
+        logger.info(f'保存贴纸到: {sticker_path}')
         file.save(sticker_path)
         
         # 保存贴纸信息到数据库
@@ -452,28 +460,35 @@ def upload_sticker():
         current_app.db.stickers.insert_one({
             'username': current_user.username,
             'url': sticker_url,
-            'created_at': datetime.now()
+            'created_at': datetime.now(),
+            'pack_name': '我的贴纸'
         })
         
+        logger.info(f'贴纸上传成功: {sticker_url}')
         return jsonify({
             'success': True,
             'url': sticker_url
         })
     
+    logger.error('不支持的文件类型')
     return jsonify({'error': '不支持的文件类型'}), 400
 
 @bp.route('/get_stickers')
 @login_required
 def get_stickers():
     try:
-        stickers = list(current_app.db.stickers.find(
-            {'username': current_user.username},
-            {'_id': 0, 'url': 1}
-        ))
-        logger.info(f'Retrieved {len(stickers)} stickers for user {current_user.username}')
+        # 只获取没有 pack_id 的贴纸（单个贴纸）
+        stickers = list(current_app.db.stickers.find({
+            'username': current_user.username,
+            'pack_id': {'$exists': False}  # 只获取不属于任何贴纸包的贴纸
+        }, {
+            '_id': 0,
+            'url': 1
+        }))
+        logger.info(f'获取到 {len(stickers)} 个单个贴纸')
         return jsonify(stickers)
     except Exception as e:
-        logger.error(f'Error getting stickers: {str(e)}')
+        logger.error(f'获取贴纸失败: {str(e)}')
         return jsonify([])
 
 @bp.route('/delete_sticker', methods=['POST'])
@@ -504,5 +519,161 @@ def delete_sticker():
     except Exception as e:
         logger.error(f'Error deleting sticker: {str(e)}')
         return jsonify({'error': '删除贴纸失败'}), 500
+
+@bp.route('/upload_sticker_pack', methods=['POST'])
+@login_required
+def upload_sticker_pack():
+    if 'sticker_pack' not in request.files:
+        return jsonify({'error': '没有文件被上传'}), 400
+    
+    file = request.files['sticker_pack']
+    pack_name = request.form.get('pack_name', '未命名贴纸包')
+    
+    if file.filename == '' or not file.filename.endswith('.zip'):
+        return jsonify({'error': '请上传ZIP格式的贴纸包'}), 400
+    
+    try:
+        zip_file = zipfile.ZipFile(io.BytesIO(file.read()))
+        uploaded_stickers = []
+        
+        # 创建贴纸包记录
+        pack_id = str(ObjectId())
+        current_app.db.sticker_packs.insert_one({
+            'id': pack_id,
+            'name': pack_name,
+            'username': current_user.username,
+            'created_at': datetime.now()
+        })
+        
+        # 处理压缩包中的每个图片
+        for filename in zip_file.namelist():
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                # 读取图片数据
+                image_data = zip_file.read(filename)
+                
+                # 生成新文件名
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                new_filename = timestamp + secure_filename(filename)
+                file_path = os.path.join(STICKER_FOLDER, new_filename)
+                
+                # 保存图片文件
+                with open(file_path, 'wb') as f:
+                    f.write(image_data)
+                
+                # 创建贴纸URL
+                sticker_url = url_for('static', filename=f'stickers/{new_filename}')
+                
+                # 保存贴纸信息到数据库
+                sticker_id = str(ObjectId())
+                current_app.db.stickers.insert_one({
+                    'id': sticker_id,
+                    'username': current_user.username,
+                    'url': sticker_url,
+                    'pack_id': pack_id,
+                    'created_at': datetime.now()
+                })
+                
+                uploaded_stickers.append(sticker_url)
+        
+        return jsonify({
+            'success': True,
+            'pack_id': pack_id,
+            'pack_name': pack_name,
+            'stickers': uploaded_stickers
+        })
+        
+    except Exception as e:
+        logger.error(f'Error uploading sticker pack: {str(e)}')
+        return jsonify({'error': '上传贴纸包失败'}), 500
+
+@bp.route('/get_sticker_packs')
+@login_required
+def get_sticker_packs():
+    try:
+        packs = list(current_app.db.sticker_packs.find(
+            {'username': current_user.username},
+            {'_id': 0, 'id': 1, 'name': 1}
+        ))
+        
+        # 为每个贴纸包获取其包含的贴纸
+        for pack in packs:
+            stickers = list(current_app.db.stickers.find(
+                {'pack_id': pack['id']},
+                {'_id': 0, 'url': 1}
+            ))
+            pack['stickers'] = [s['url'] for s in stickers]
+        
+        return jsonify(packs)
+    except Exception as e:
+        logger.error(f'Error getting sticker packs: {str(e)}')
+        return jsonify([])
+
+@bp.route('/delete_sticker_pack', methods=['POST'])
+@login_required
+def delete_sticker_pack():
+    pack_id = request.json.get('pack_id')
+    if not pack_id:
+        return jsonify({'error': '未指定贴纸包'}), 400
+    
+    try:
+        # 检查贴纸包是否存在且属于当前用户
+        pack = current_app.db.sticker_packs.find_one({
+            'id': pack_id,
+            'username': current_user.username
+        })
+        
+        if not pack:
+            return jsonify({'error': '贴纸包不存在或无权删除'}), 404
+        
+        # 获取包内所有贴纸
+        stickers = list(current_app.db.stickers.find({
+            'pack_id': pack_id,
+            'username': current_user.username
+        }))
+        
+        # 删除所有贴纸文件
+        for sticker in stickers:
+            filename = sticker['url'].split('/')[-1]
+            file_path = os.path.join(STICKER_FOLDER, filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        # 从数据库中删除贴纸记录
+        current_app.db.stickers.delete_many({
+            'pack_id': pack_id,
+            'username': current_user.username
+        })
+        
+        # 删除贴纸包记录
+        current_app.db.sticker_packs.delete_one({
+            'id': pack_id,
+            'username': current_user.username
+        })
+        
+        return jsonify({'success': True})
+            
+    except Exception as e:
+        logger.error(f'Error deleting sticker pack: {str(e)}')
+        return jsonify({'error': '删除贴纸包失败'}), 500
+
+@bp.route('/upload_emoji', methods=['POST'])
+@login_required
+def upload_emoji():
+    if 'emoji' not in request.files:
+        return jsonify({'error': '没有文件被上传'}), 400
+    
+    file = request.files['emoji']
+    if file.filename == '':
+        return jsonify({'error': '未选择文件'}), 400
+        
+    if allowed_file(file.filename):  # 确保您有一个函数来检查文件类型
+        filename = secure_filename(file.filename)
+        emoji_path = os.path.join(EMOJI_FOLDER, filename)  # 确保您定义了 EMOJI_FOLDER
+        file.save(emoji_path)
+        
+        # 这里可以将表情信息保存到数据库，或者直接返回成功信息
+        return jsonify({'success': True, 'url': url_for('static', filename=f'emojis/{filename}')})
+    
+    return jsonify({'error': '不支持的文件类型'}), 400
 
 

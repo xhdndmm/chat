@@ -264,7 +264,7 @@ body {
     display: flex;
     flex-direction: column;
     background-color: var(--chat-bg);
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23e5e5e5' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm60 91c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-35-63c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-23-31c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-29-60c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%23e5e5e5' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
 }
 
 .chat-header {
@@ -697,10 +697,13 @@ body {
     left: 50%;
     transform: translateX(-50%);
     width: 360px;
+    height: 500px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
     z-index: 9999;
+    display: flex;
+    flex-direction: column;
 }
 
 .emoji-tabs {
@@ -708,6 +711,7 @@ body {
     align-items: center;
     padding: 8px;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .tab-button {
@@ -727,61 +731,163 @@ body {
 }
 
 .tab-contents {
-    max-height: 300px;
-    overflow-y: auto;
+    flex: 1;
+    overflow: hidden;
 }
 
 .tab-content {
-    display: none !important;  /* 强制隐藏 */
+    display: none;
+    height: 100%;
+    overflow: auto;
 }
 
 .tab-content.active {
-    display: block !important;  /* 强制显示 */
+    display: block !important;
 }
 
-/* 贴纸容器样式 */
+/* 贴纸相关样式 */
 .sticker-container {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    padding: 12px;
-    max-height: 300px;
+    height: calc(100% - 80px);
     overflow-y: auto;
+    padding: 12px;
 }
 
-.sticker-container img {
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
+.sticker-packs {
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-bottom: 12px;
+}
+
+.pack-upload-box {
+    width: 80px;
+    height: 80px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border: 2px dashed #ccc;
     border-radius: 8px;
+    background-color: white;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.pack-upload-box:hover {
+    background-color: #f5f5f5;
+    border-color: var(--primary-color);
+}
+
+.upload-icon-large {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+    margin-right: 0;
+}
+
+.upload-icon-large svg {
+    width: 100%;
+    height: 100%;
+    fill: #666;
+}
+
+.pack-upload-box:hover .upload-icon-large svg {
+    fill: var(--primary-color);
+}
+
+.pack-upload-box span {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.pack-upload-box:hover span {
+    color: var(--primary-color);
+}
+
+/* 贴纸包样式 */
+.sticker-pack {
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.sticker-pack:last-child {
+    margin-bottom: 0;
+}
+
+.pack-header {
+    padding: 4px 12px;
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* 贴纸网格样式 */
+.sticker-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+}
+
+.sticker-wrapper {
+    flex: 0 0 calc(20% - 4px);
+    aspect-ratio: 1;
+    position: relative;
+}
+
+.sticker-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
     cursor: pointer;
     transition: transform 0.2s;
-    border: 1px solid var(--border-color);
+    border: none;
+    background: transparent;
 }
 
-.sticker-container img:hover {
+.sticker-wrapper img:hover {
     transform: scale(1.05);
 }
 
-/* 贴纸上传区域样式 */
-.sticker-upload {
-    padding: 12px;
-    text-align: center;
-    border-top: 1px solid var(--border-color);
-}
-
-.sticker-upload button {
-    padding: 8px 16px;
-    background-color: var(--primary-color);
+/* 删除按钮样式 */
+.sticker-delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ff4d4f;
     color: white;
     border: none;
-    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 1;
 }
 
-.sticker-upload button:hover {
-    background-color: #008f6c;
+.sticker-wrapper:hover .sticker-delete-btn {
+    opacity: 1;
+}
+
+.sticker-delete-btn:hover {
+    background: #ff7875;
 }
 
 /* 开发团队样式 */
@@ -923,9 +1029,9 @@ body {
 
 /* 修改图片消息样式 */
 .message-content.image-message {
-    padding: 0;  /* 移除内边距 */
-    background: none;  /* 移除背景色 */
-    box-shadow: none;  /* 移除阴影 */
+    padding: 0;
+    background: none;
+    box-shadow: none;
 }
 
 /* 移除图片消息的气泡尾巴 */
@@ -935,8 +1041,8 @@ body {
 
 /* 调整图片消息容器的样式 */
 .message-content.image-message .file-message {
-    padding: 0;  /* 移除内边距 */
-    background: none;  /* 移除背景色 */
+    padding: 0;
+    background: none;
 }
 
 /* 右键菜单样式 */
@@ -1016,7 +1122,7 @@ body {
 .message-content.video-message .file-message {
     padding: 0;
     background: none;
-    display: inline-block;  /* 让容器适应视频大小 */
+    display: inline-block;
 }
 
 /* 视频控件样式优化 */
@@ -1081,7 +1187,7 @@ body {
 }
 
 .sticker-message::before {
-    display: none; /* 移除气泡尾巴 */
+    display: none;
 }
 
 .sticker-image {
@@ -1145,4 +1251,3 @@ body {
 .sticker-delete-btn:hover {
     background: #ff7875;
 }
- 

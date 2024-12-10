@@ -47,7 +47,7 @@
                         <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
                     </svg>
                 </a>
-                <button onclick="window.location.href='{{ url_for('main.logout') }}'" class="action-btn" title="登出">
+                <button onclick="window.location.href='{{ url_for('main.logout') }}';" class="action-btn" title="登出">
                     <svg viewBox="0 0 24 24">
                         <path d="M17,7l-1.41,1.41L18.17,11H8v2h10.17l-2.58,2.58L17,17l5-5L17,7z M4,5h8V3H4C2.9,3,2,3.9,2,5v14c0,1.1,0.9,2,2,2h8v-2H4V5z"/>
                     </svg>
@@ -114,19 +114,33 @@
 
                     <!-- 贴纸选项卡 -->
                     <div id="stickers-tab" class="tab-content">
-                        <div class="sticker-container">
-                            <!-- 添加上传按钮到贴纸网格中 -->
-                            <div class="sticker-upload-box" onclick="document.getElementById('sticker-upload-input').click()">
+                        <div class="sticker-packs">
+                            <!-- 贴纸包上传按钮 -->
+                            <div class="pack-upload-box" onclick="document.getElementById('pack-upload-input').click()">
                                 <div class="upload-icon-large">
                                     <svg viewBox="0 0 24 24">
                                         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                                     </svg>
                                 </div>
-                                <span>添加贴纸</span>
+                                <span>导入贴纸包</span>
                             </div>
+                            <input type="file" id="pack-upload-input" style="display: none" 
+                                   accept=".zip" onchange="uploadStickerPack(this)">
+                            <!-- 添加上传单个贴纸的功能 -->
+                            <div class="pack-upload-box" onclick="document.getElementById('sticker-upload-input').click()">
+                                <div class="upload-icon-large">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                                    </svg>
+                                </div>
+                                <span>导入单个贴纸</span>
+                            </div>
+                            <input type="file" id="sticker-upload-input" style="display: none" 
+                                   accept=".png,.jpg,.jpeg" onchange="uploadSticker(this)">
                         </div>
-                        <input type="file" id="sticker-upload-input" style="display: none" 
-                               accept="image/*" onchange="uploadSticker(this)">
+                        <div class="sticker-container" style="max-height: 300px; overflow-y: auto;">
+                            <!-- 贴纸将在这里显示 -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -220,12 +234,19 @@
         }
 
         // 将其他贴纸相关函数也移到全局作用域
-        function uploadSticker(input) {
+        function uploadStickerPack(input) {
             if (input.files && input.files[0]) {
+                const packName = prompt('请输入贴纸包名称：');
+                if (!packName) {
+                    input.value = '';
+                    return;
+                }
+
                 const formData = new FormData();
-                formData.append('sticker', input.files[0]);
+                formData.append('sticker_pack', input.files[0]);
+                formData.append('pack_name', packName);
                 
-                fetch('/upload_sticker', {
+                fetch('/upload_sticker_pack', {
                     method: 'POST',
                     body: formData
                 })
@@ -239,58 +260,112 @@
                     }
                 })
                 .catch(error => {
-                    console.error('上传贴纸失败:', error);
+                    console.error('上传贴纸包失败:', error);
                     alert('上传失败，请重试');
                 });
             }
         }
 
         function loadStickers() {
-            fetch('/get_stickers')
+            console.log('开始加载贴纸');
+            
+            // 加载贴纸包
+            fetch('/get_sticker_packs')
                 .then(response => response.json())
-                .then(stickers => {
+                .then(packs => {
+                    console.log('获取到的贴纸包:', packs);
                     const container = document.querySelector('.sticker-container');
-                    if (!container) return;
+                    if (!container) {
+                        console.error('找不到贴纸容器');
+                        return;
+                    }
                     
+                    // 清空现有内容
                     container.innerHTML = '';
                     
-                    // 添加上传按钮
-                    const uploadBox = document.createElement('div');
-                    uploadBox.className = 'sticker-upload-box';
-                    uploadBox.onclick = () => document.getElementById('sticker-upload-input').click();
-                    uploadBox.innerHTML = `
-                        <div class="upload-icon-large">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                            </svg>
-                        </div>
-                        <span>添加贴纸</span>
-                    `;
-                    container.appendChild(uploadBox);
-                    
-                    // 添加现有贴纸
-                    stickers.forEach(sticker => {
-                        const stickerWrapper = document.createElement('div');
-                        stickerWrapper.className = 'sticker-wrapper';
+                    // 添加贴纸包
+                    packs.forEach(pack => {
+                        const packDiv = document.createElement('div');
+                        packDiv.className = 'sticker-pack';
+                        packDiv.setAttribute('data-pack-name', pack.name);
                         
-                        const img = document.createElement('img');
-                        img.src = sticker.url;
-                        img.onclick = () => insertSticker(sticker.url);
+                        const header = document.createElement('div');
+                        header.className = 'pack-header';
+                        header.innerHTML = `
+                            <span class="pack-name">${pack.name}</span>
+                            <span class="pack-delete" onclick="deleteStickerPack('${pack.id}')">删除</span>
+                        `;
                         
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'sticker-delete-btn';
-                        deleteBtn.innerHTML = '×';
-                        deleteBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            if (confirm('确定要删除这个贴纸吗？')) {
-                                deleteSticker(sticker.url);
-                            }
-                        };
+                        const grid = document.createElement('div');
+                        grid.className = 'sticker-grid';
                         
-                        stickerWrapper.appendChild(img);
-                        stickerWrapper.appendChild(deleteBtn);
-                        container.appendChild(stickerWrapper);
+                        pack.stickers.forEach(url => {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'sticker-wrapper';
+                            
+                            const img = document.createElement('img');
+                            img.src = url;
+                            img.onclick = () => insertSticker(url);
+                            
+                            wrapper.appendChild(img);
+                            grid.appendChild(wrapper);
+                        });
+                        
+                        packDiv.appendChild(header);
+                        packDiv.appendChild(grid);
+                        container.appendChild(packDiv);
                     });
+                    
+                    // 加载单个贴纸
+                    return fetch('/get_stickers');
+                })
+                .then(response => response.json())
+                .then(stickers => {
+                    console.log('获取到的单个贴纸:', stickers);
+                    const container = document.querySelector('.sticker-container');
+                    
+                    if (stickers.length > 0) {
+                        // 创建"我的贴纸"部分
+                        const myStickersDiv = document.createElement('div');
+                        myStickersDiv.className = 'sticker-pack';
+                        myStickersDiv.setAttribute('data-pack-name', '我的贴纸');
+                        
+                        const header = document.createElement('div');
+                        header.className = 'pack-header';
+                        header.innerHTML = `<span class="pack-name">我的贴纸</span>`;
+                        
+                        const grid = document.createElement('div');
+                        grid.className = 'sticker-grid';
+                        
+                        stickers.forEach(sticker => {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'sticker-wrapper';
+                            
+                            const img = document.createElement('img');
+                            img.src = sticker.url;
+                            img.onclick = () => insertSticker(sticker.url);
+                            
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.className = 'sticker-delete-btn';
+                            deleteBtn.innerHTML = '×';
+                            deleteBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                if (confirm('确定要删除这个贴纸吗？')) {
+                                    deleteSticker(sticker.url);
+                                }
+                            };
+                            
+                            wrapper.appendChild(img);
+                            wrapper.appendChild(deleteBtn);
+                            grid.appendChild(wrapper);
+                        });
+                        
+                        myStickersDiv.appendChild(header);
+                        myStickersDiv.appendChild(grid);
+                        container.appendChild(myStickersDiv);
+                    }
+                    
+                    console.log('贴纸加载完成');
                 })
                 .catch(error => console.error('加载贴纸失败:', error));
         }
@@ -323,6 +398,59 @@
             socket.emit('message', `[sticker]${url}[/sticker]`);
             document.getElementById('emoji-panel').style.display = 'none';
         }
+
+        // 添加删除贴纸包的函数
+        function deleteStickerPack(packId) {
+            if (confirm('确定要删除这个贴纸包吗？这将删除包内所有贴纸。')) {
+                fetch('/delete_sticker_pack', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pack_id: packId })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        loadStickers(); // 重新加载贴纸列表
+                    } else {
+                        alert(result.error || '删除失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('删除贴纸包失败:', error);
+                    alert('删除失败，请重试');
+                });
+            }
+        }
+
+
+        function uploadSticker(input) {
+    console.log('开始上传贴纸:', input.files[0]);
+    if (input.files && input.files[0]) {
+        const formData = new FormData();
+        formData.append('sticker', input.files[0]);
+        
+        fetch('/upload_sticker', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            console.log('上传结果:', result);
+            if (result.success) {
+                loadStickers();  // 重新加载所有贴纸
+                input.value = '';  // 清除文件输入
+            } else {
+                alert(result.error || '上传失败');
+            }
+        })
+        .catch(error => {
+            console.error('上传贴纸失败:', error);
+            alert('上传失败，请重试');
+        });
+    }
+}
 
         document.addEventListener('DOMContentLoaded', () => {
             const socket = io();
@@ -404,7 +532,7 @@
                 avatarDiv.appendChild(avatarImg);
                 messageDiv.appendChild(avatarDiv);
 
-                // 消息内容容器
+                // 息内容容器
                 const contentContainer = document.createElement('div');
                 contentContainer.className = 'message-container';
 
@@ -633,7 +761,7 @@
 
             // 修改输入监听部分
             input.addEventListener('input', () => {
-                if (input.value.trim()) {  // 只有当输入框有内容时才发送状态
+                if (input.value.trim()) {  // 只有当输入有内容时才发送状态
                     clearTimeout(typingTimer);
                     socket.emit('typing', { status: 'typing' });
                     
