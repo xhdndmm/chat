@@ -33,7 +33,7 @@ ALLOWED_EXTENSIONS = {
     # 压缩文件
     'zip', 'rar', '7z', 'tar', 'gz',
     # 图片文件
-    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'webm',
     # 视频文件
     'mp4', 'webm', 'avi', 'mov', 'wmv', 'flv', 'm4v',
     # 代码文件
@@ -545,20 +545,21 @@ def upload_sticker_pack():
             'created_at': datetime.now()
         })
         
-        # 处理压缩包中的每个图片
+        # 处理压缩包中的每个文件
         for filename in zip_file.namelist():
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
-                # 读取图片数据
-                image_data = zip_file.read(filename)
+            # 修改这里以支持 webm 格式
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.webm')):
+                # 读取文件数据
+                file_data = zip_file.read(filename)
                 
                 # 生成新文件名
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
                 new_filename = timestamp + secure_filename(filename)
                 file_path = os.path.join(STICKER_FOLDER, new_filename)
                 
-                # 保存图片文件
+                # 保存文件
                 with open(file_path, 'wb') as f:
-                    f.write(image_data)
+                    f.write(file_data)
                 
                 # 创建贴纸URL
                 sticker_url = url_for('static', filename=f'stickers/{new_filename}')
@@ -570,10 +571,17 @@ def upload_sticker_pack():
                     'username': current_user.username,
                     'url': sticker_url,
                     'pack_id': pack_id,
-                    'created_at': datetime.now()
+                    'created_at': datetime.now(),
+                    'type': 'webm' if filename.lower().endswith('.webm') else 'image'  # 添加类型标记
                 })
                 
                 uploaded_stickers.append(sticker_url)
+                logger.info(f'成功导入贴纸: {new_filename}')
+        
+        if not uploaded_stickers:
+            # 如果没有成功导入任何贴纸，删除贴纸包记录
+            current_app.db.sticker_packs.delete_one({'id': pack_id})
+            return jsonify({'error': '压缩包中没有有效的贴纸文件'}), 400
         
         return jsonify({
             'success': True,
@@ -583,8 +591,14 @@ def upload_sticker_pack():
         })
         
     except Exception as e:
-        logger.error(f'Error uploading sticker pack: {str(e)}')
-        return jsonify({'error': '上传贴纸包失败'}), 500
+        logger.error(f'导入贴纸包失败: {str(e)}')
+        # 发生错误时，尝试清理已创建的贴纸包
+        try:
+            current_app.db.sticker_packs.delete_one({'id': pack_id})
+            current_app.db.stickers.delete_many({'pack_id': pack_id})
+        except:
+            pass
+        return jsonify({'error': '导入贴纸包失败，请重试'}), 500
 
 @bp.route('/get_sticker_packs')
 @login_required

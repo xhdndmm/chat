@@ -306,7 +306,11 @@
                         header.className = 'pack-header';
                         header.innerHTML = `
                             <span class="pack-name">${pack.name}</span>
-                            <span class="pack-delete" onclick="deleteStickerPack('${pack.id}')">删除</span>
+                            <button class="pack-delete" onclick="deleteStickerPack('${pack.id}')" title="删除贴纸包">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                            </button>
                         `;
                         
                         const grid = document.createElement('div');
@@ -316,71 +320,37 @@
                             const wrapper = document.createElement('div');
                             wrapper.className = 'sticker-wrapper';
                             
-                            const img = document.createElement('img');
-                            img.src = url;
-                            img.onclick = () => insertSticker(url);
+                            const fileExt = url.split('.').pop().toLowerCase();
+                            let element;
                             
-                            wrapper.appendChild(img);
+                            if (fileExt === 'webm') {
+                                element = document.createElement('video');
+                                element.src = url;
+                                element.autoplay = true;
+                                element.loop = true;
+                                element.muted = true;
+                                element.playsInline = true;
+                            } else {
+                                element = document.createElement('img');
+                                element.src = url;
+                            }
+                            
+                            element.onclick = () => insertSticker(url);
+                            wrapper.appendChild(element);
                             grid.appendChild(wrapper);
                         });
                         
                         packDiv.appendChild(header);
                         packDiv.appendChild(grid);
                         container.appendChild(packDiv);
-                    });
-                    
-                    // 加载单个贴纸
-                    return fetch('/get_stickers');
-                })
-                .then(response => response.json())
-                .then(stickers => {
-                    console.log('获取到的单个贴纸:', stickers);
-                    const container = document.querySelector('.sticker-container');
-                    
-                    if (stickers.length > 0) {
-                        // 创建"我的贴纸"部分
-                        const myStickersDiv = document.createElement('div');
-                        myStickersDiv.className = 'sticker-pack';
-                        myStickersDiv.setAttribute('data-pack-name', '我的贴纸');
                         
-                        const header = document.createElement('div');
-                        header.className = 'pack-header';
-                        header.innerHTML = `<span class="pack-name">我的贴纸</span>`;
-                        
-                        const grid = document.createElement('div');
-                        grid.className = 'sticker-grid';
-                        
-                        stickers.forEach(sticker => {
-                            const wrapper = document.createElement('div');
-                            wrapper.className = 'sticker-wrapper';
-                            
-                            const img = document.createElement('img');
-                            img.src = sticker.url;
-                            img.onclick = () => insertSticker(sticker.url);
-                            
-                            const deleteBtn = document.createElement('button');
-                            deleteBtn.className = 'sticker-delete-btn';
-                            deleteBtn.innerHTML = '×';
-                            deleteBtn.onclick = (e) => {
-                                e.stopPropagation();
-                                if (confirm('确定要删除这个贴纸吗？')) {
-                                    deleteSticker(sticker.url);
-                                }
-                            };
-                            
-                            wrapper.appendChild(img);
-                            wrapper.appendChild(deleteBtn);
-                            grid.appendChild(wrapper);
+                        // 确保所有视频都开始播放
+                        const videos = packDiv.querySelectorAll('video');
+                        videos.forEach(video => {
+                            video.play().catch(e => console.log('视频自动播放失败:', e));
                         });
-                        
-                        myStickersDiv.appendChild(header);
-                        myStickersDiv.appendChild(grid);
-                        container.appendChild(myStickersDiv);
-                    }
-                    
-                    console.log('贴纸加载完成');
-                })
-                .catch(error => console.error('加载贴纸失败:', error));
+                    });
+                });
         }
 
         // 添加删除贴纸的函数
@@ -409,6 +379,14 @@
         function insertSticker(url) {
             const socket = io();
             socket.emit('message', `[sticker]${url}[/sticker]`);
+            
+            // 如果是从预览窗口发送，关闭预览窗口
+            const previewModal = document.getElementById('stickerPreviewModal');
+            if (previewModal.style.display === 'flex') {
+                previewModal.style.display = 'none';
+            }
+            
+            // 关闭表情面板
             document.getElementById('emoji-panel').style.display = 'none';
         }
 
@@ -567,12 +545,29 @@
                     // 贴纸消息处理
                     const stickerUrl = msgData.text.replace('[sticker]', '').replace('[/sticker]', '');
                     contentDiv.className = 'message-content sticker-message';
-                    const img = document.createElement('img');
-                    img.src = stickerUrl;
-                    img.className = 'sticker-image';
-                    // 添加点击事件
-                    img.onclick = () => showStickerPreview(stickerUrl);
-                    contentDiv.appendChild(img);
+                    
+                    // 检查文件扩展名
+                    const fileExt = stickerUrl.split('.').pop().toLowerCase();
+                    
+                    if (fileExt === 'webm') {
+                        // 如果是 webm 格式，使用 video 标签
+                        const video = document.createElement('video');
+                        video.src = stickerUrl;
+                        video.className = 'sticker-image webm-sticker';
+                        video.autoplay = true;
+                        video.loop = true;
+                        video.muted = true;
+                        video.playsInline = true;
+                        video.onclick = () => showStickerPreview(stickerUrl);
+                        contentDiv.appendChild(video);
+                    } else {
+                        // 其他图片格式使用 img 标签
+                        const img = document.createElement('img');
+                        img.src = stickerUrl;
+                        img.className = 'sticker-image';
+                        img.onclick = () => showStickerPreview(stickerUrl);
+                        contentDiv.appendChild(img);
+                    }
                 } else if (msgData.type === 'file') {
                     // 文件消息处理
                     const fileExt = msgData.filename.split('.').pop().toLowerCase();
@@ -920,9 +915,6 @@
                 grid.innerHTML = ''; // 清空现有内容
                 
                 try {
-                    // 从URL中提取贴纸包名称
-                    const packName = url.split('/').pop().split('_')[2];
-                    
                     // 获取贴纸包内容
                     const response = await fetch('/get_sticker_packs');
                     const packs = await response.json();
@@ -936,20 +928,40 @@
                             const wrapper = document.createElement('div');
                             wrapper.className = 'preview-sticker-wrapper';
                             
-                            const img = document.createElement('img');
-                            img.src = stickerUrl;
-                            img.className = 'preview-sticker';
-                            img.onclick = () => {
-                                // 点击贴纸时发送该贴纸
+                            const fileExt = stickerUrl.split('.').pop().toLowerCase();
+                            let element;
+                            
+                            if (fileExt === 'webm') {
+                                element = document.createElement('video');
+                                element.src = stickerUrl;
+                                element.className = 'preview-sticker webm-sticker';
+                                element.autoplay = true;
+                                element.loop = true;
+                                element.muted = true;
+                                element.playsInline = true;
+                            } else {
+                                element = document.createElement('img');
+                                element.src = stickerUrl;
+                                element.className = 'preview-sticker';
+                            }
+                            
+                            element.onclick = () => {
                                 const socket = io();
                                 socket.emit('message', `[sticker]${stickerUrl}[/sticker]`);
+                                modal.style.display = 'none'; // 发送后关闭预览
                             };
                             
-                            wrapper.appendChild(img);
+                            wrapper.appendChild(element);
                             grid.appendChild(wrapper);
                         });
                         
                         modal.style.display = 'flex';
+                        
+                        // 确保所有视频都开始播放
+                        const videos = grid.querySelectorAll('video');
+                        videos.forEach(video => {
+                            video.play().catch(e => console.log('视频自动播放失败:', e));
+                        });
                     }
                 } catch (error) {
                     console.error('加载贴纸包预览失败:', error);
