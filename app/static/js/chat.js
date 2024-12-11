@@ -184,29 +184,58 @@ function initFormSubmit(form, input, socket) {
 
 // 初始化文件上传
 function initFileUpload(fileInput) {
-    fileInput.addEventListener('change', async (e) => {
+    fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         const formData = new FormData();
         formData.append('file', file);
 
-        try {
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData
-            });
+        // 显示进度条
+        const progressBar = document.getElementById('upload-progress');
+        const progressFill = progressBar.querySelector('.progress-fill');
+        const progressText = progressBar.querySelector('.progress-text');
+        progressBar.style.display = 'block';
 
-            const result = await response.json();
-            if (result.error) {
-                alert(result.error);
+        const xhr = new XMLHttpRequest();
+
+        // 监听上传进度
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentCompleted = Math.round((e.loaded * 100) / e.total);
+                progressFill.style.width = `${percentCompleted}%`;
+                progressText.textContent = `${percentCompleted}%`;
+            }
+        });
+
+        // 监听上传完成
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                if (response.error) {
+                    alert(response.error);
+                }
+            } else {
+                alert('上传失败');
             }
             
+            // 重置和隐藏进度条
             fileInput.value = '';
-        } catch (error) {
-            console.error('Upload failed:', error);
-            alert('文件上传失败');
-        }
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+                progressFill.style.width = '0';
+                progressText.textContent = '0%';
+            }, 1000);
+        });
+
+        // 监听上传错误
+        xhr.addEventListener('error', () => {
+            alert('上传失败');
+            progressBar.style.display = 'none';
+        });
+
+        xhr.open('POST', '/upload', true);
+        xhr.send(formData);
     });
 }
 

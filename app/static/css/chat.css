@@ -1429,3 +1429,35 @@ video.preview-sticker {
     transition: transform 0.2s;
     display: block;
 }
+
+/* 上传进度条样式 */
+.upload-progress {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    background: var(--bg-color);
+    border-top: 1px solid var(--border-color);
+}
+
+.progress-bar {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0;
+    background: var(--primary-color);
+    transition: width 0.2s ease;
+}
+
+.progress-text {
+    font-size: 12px;
+    color: #666;
+    text-align: right;
+    margin-top: 4px;
+}
