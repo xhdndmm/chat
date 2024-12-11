@@ -557,12 +557,12 @@ function showTab(tabId) {
 
 // 贴纸相关函数
 function loadStickers() {
-    console.log('开始加载贴纸');
+    console.log('开始加载贴纸...');
     
     fetch('/get_sticker_packs')
         .then(response => response.json())
         .then(packs => {
-            console.log('获取到的贴纸包:', packs);
+            console.log('获取到的贴纸包数据:', packs);
             const container = document.querySelector('.sticker-container');
             if (!container) {
                 console.error('找不到贴纸容器');
@@ -571,7 +571,69 @@ function loadStickers() {
             
             container.innerHTML = '';
             
+            // 处理单个贴纸（没有包名的贴纸）
+            const singleStickers = [];
+            
+            // 遍历所有数据
             packs.forEach(pack => {
+                console.log('处理贴纸包:', pack);
+                if (typeof pack === 'string') {
+                    // 如果是单个贴纸 URL
+                    singleStickers.push(pack);
+                } else if (pack.stickers) {
+                    // 如果是贴纸包
+                    if (!pack.name) {
+                        singleStickers.push(...pack.stickers);
+                    }
+                }
+            });
+            
+            console.log('收集到的单个贴纸:', singleStickers);
+
+            // 显示单个贴纸
+            if (singleStickers.length > 0) {
+                const packDiv = document.createElement('div');
+                packDiv.className = 'sticker-pack';
+                packDiv.setAttribute('data-pack-name', '未分组贴纸');
+                
+                const header = document.createElement('div');
+                header.className = 'pack-header';
+                header.innerHTML = `<span class="pack-name">未分组贴纸</span>`;
+                
+                const grid = document.createElement('div');
+                grid.className = 'sticker-grid';
+                
+                singleStickers.forEach(url => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'sticker-wrapper';
+                    
+                    const fileExt = url.split('.').pop().toLowerCase();
+                    let element;
+                    
+                    if (fileExt === 'webm') {
+                        element = document.createElement('video');
+                        element.src = url;
+                        element.autoplay = true;
+                        element.loop = true;
+                        element.muted = true;
+                        element.playsInline = true;
+                    } else {
+                        element = document.createElement('img');
+                        element.src = url;
+                    }
+                    
+                    element.onclick = () => insertSticker(url);
+                    wrapper.appendChild(element);
+                    grid.appendChild(wrapper);
+                });
+                
+                packDiv.appendChild(header);
+                packDiv.appendChild(grid);
+                container.appendChild(packDiv);
+            }
+
+            // 处理贴纸包
+            packs.filter(p => p.name && p.name !== '').forEach(pack => {
                 const packDiv = document.createElement('div');
                 packDiv.className = 'sticker-pack';
                 packDiv.setAttribute('data-pack-name', pack.name);
@@ -623,6 +685,9 @@ function loadStickers() {
                     video.play().catch(e => console.log('视频自动播放失败:', e));
                 });
             });
+        })
+        .catch(error => {
+            console.error('加载贴纸失败:', error);
         });
 }
 
@@ -670,15 +735,66 @@ function uploadSticker(input) {
         .then(response => response.json())
         .then(result => {
             if (result.success) {
-                loadStickers();
+                console.log('贴纸上传成功:', result);
+                
+                // 手动添加到贴纸列表
+                const container = document.querySelector('.sticker-container');
+                if (!container) return;
+                
+                // 检查是否已存在未分组贴纸区域
+                let unGroupedDiv = container.querySelector('[data-pack-name="未分组贴纸"]');
+                if (!unGroupedDiv) {
+                    // 如果不存在，创建新的未分组区域
+                    unGroupedDiv = document.createElement('div');
+                    unGroupedDiv.className = 'sticker-pack';
+                    unGroupedDiv.setAttribute('data-pack-name', '未分组贴纸');
+                    
+                    const header = document.createElement('div');
+                    header.className = 'pack-header';
+                    header.innerHTML = `<span class="pack-name">未分组贴纸</span>`;
+                    
+                    const grid = document.createElement('div');
+                    grid.className = 'sticker-grid';
+                    
+                    unGroupedDiv.appendChild(header);
+                    unGroupedDiv.appendChild(grid);
+                    container.insertBefore(unGroupedDiv, container.firstChild);
+                }
+                
+                // 添加新贴纸
+                const grid = unGroupedDiv.querySelector('.sticker-grid');
+                const wrapper = document.createElement('div');
+                wrapper.className = 'sticker-wrapper';
+                
+                const img = document.createElement('img');
+                img.src = result.url;
+                img.onclick = () => insertSticker(result.url);
+                
+                // 添加删除按钮
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'sticker-delete-btn';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();  // 阻止事件冒泡
+                    if (confirm('确定要删除这个贴纸吗？')) {
+                        deleteSticker(result.url);
+                    }
+                };
+                
+                wrapper.appendChild(img);
+                wrapper.appendChild(deleteBtn);  // 添加删除按钮到包装器
+                grid.appendChild(wrapper);
+                
                 input.value = '';
             } else {
+                console.error('上传失败:', result.error);
                 alert(result.error || '上传失败');
             }
         })
         .catch(error => {
             console.error('上传贴纸失败:', error);
             alert('上传失败，请重试');
+            input.value = '';
         });
     }
 }
