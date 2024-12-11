@@ -365,20 +365,32 @@ function handleStickerMessage(msgData, contentDiv) {
 // 处理文件消息
 function handleFileMessage(msgData, contentDiv) {
     const fileExt = msgData.filename.split('.').pop().toLowerCase();
-    const fileLink = document.createElement('a');
-    fileLink.href = msgData.url;
-    fileLink.target = '_blank';
-    fileLink.className = 'file-message';
-
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExt)) {
-        handleImageFile(msgData, contentDiv, fileLink);
-    } else if (['mp4', 'webm', 'avi', 'mov', 'wmv', 'flv', 'm4v'].includes(fileExt)) {
-        handleVideoFile(msgData, contentDiv, fileLink);
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
+        // 移除消息内容的默认样式
+        contentDiv.className = 'message-content image-message';
+        
+        const img = document.createElement('img');
+        img.src = msgData.url;
+        img.className = 'message-image';
+        img.onclick = (e) => {
+            e.preventDefault();
+            showImagePreview(msgData.url);
+        };
+        contentDiv.appendChild(img);
     } else {
-        handleOtherFile(msgData, fileExt, fileLink);
+        const fileLink = document.createElement('a');
+        fileLink.href = msgData.url;
+        fileLink.target = '_blank';
+        fileLink.className = 'file-message';
+        
+        if (['mp4', 'webm', 'avi', 'mov', 'wmv', 'flv', 'm4v'].includes(fileExt)) {
+            handleVideoFile(msgData, contentDiv, fileLink);
+        } else {
+            handleOtherFile(msgData, contentDiv, fileLink);
+        }
+        
+        contentDiv.appendChild(fileLink);
     }
-    
-    contentDiv.appendChild(fileLink);
 }
 
 // 处理图片文件
@@ -812,4 +824,34 @@ function deleteMessage(messageId) {
     if (confirm('确定要删除这条消息吗？')) {
         socket.emit('delete_message', { id: messageId });
     }
+}
+
+// 添加图片预览函数（如果还没有的话）
+function showImagePreview(url) {
+    const modal = document.getElementById('imagePreviewModal');
+    const previewImg = document.getElementById('previewImage');
+    
+    previewImg.src = url;
+    modal.style.display = 'block';
+
+    // 点击关闭按钮关闭预览
+    modal.querySelector('.close-preview').onclick = () => {
+        modal.style.display = 'none';
+    };
+
+    // 点击背景关闭预览
+    modal.onclick = (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    // ESC 键关闭预览
+    const escHandler = (event) => {
+        if (event.key === 'Escape') {
+            modal.style.display = 'none';
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
 }

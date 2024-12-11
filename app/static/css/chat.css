@@ -1039,8 +1039,9 @@ body {
 
 /* 修改图片消息样式 */
 .message-content.image-message {
-    padding: 0;
     background: none;
+    padding: 0;
+    border-radius: 0;
     box-shadow: none;
 }
 
@@ -1418,4 +1419,13 @@ video.preview-sticker {
 /* 管理员图标特殊样式 */
 .sidebar-icon[onclick="checkAdminAccess()"] {
     color: var(--primary-color);
+}
+
+/* 调整图片样式 */
+.message-image {
+    max-width: 300px;
+    max-height: 300px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    display: block;
 }
