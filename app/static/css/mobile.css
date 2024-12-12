@@ -1,0 +1,74 @@
+/* 基础消息样式 - 仅用于文本消息 */
+.message-content {
+    padding: 8px 12px;
+    background: #fff;
+    border-radius: 12px;
+    max-width: 70%;
+}
+
+/* 图片消息样式 */
+.image-message {
+    padding: 0 !important;
+    background: none !important;
+    border-radius: 0 !important;
+    font-size: 0;
+    line-height: 0;
+}
+
+/* 图片样式 */
+.message-image {
+    max-width: 200px;
+    max-height: 300px;
+    border-radius: 8px;
+    object-fit: cover;
+    vertical-align: top;
+}
+
+/* 消息对齐方式 */
+.message {
+    margin: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.message-own {
+    align-items: flex-end;
+}
+
+/* 自己发送的文本消息样式 */
+.message-own .message-content:not(:has(.message-image)):not(:has(.message-video)) {
+    background: #95ec69;
+}
+
+/* 视频容器样式 */
+.message-video {
+    width: auto;
+    max-width: 70%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* 视频样式 */
+.message-video video {
+    width: 100%;
+    max-width: 240px;
+    max-height: 400px;
+    display: block;
+}
+
+/* 贴纸样式 */
+.message-sticker {
+    width: auto;
+    max-width: 120px;
+    height: auto;
+    vertical-align: top;
+}
+
+/* 时间和用户名样式 */
+.message-meta {
+    font-size: 12px;
+    color: #999;
+    margin: 2px 4px;
+} 

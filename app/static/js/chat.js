@@ -283,6 +283,12 @@ function updateTypingStatus() {
 // 添加消息到聊天界面
 function appendMessage(msgData) {
     console.log('Appending message:', msgData);
+    
+    // 确保消息格式一致
+    if (!msgData || typeof msgData.text === 'object') {
+        msgData.text = msgData.text?.text || '';
+    }
+
     const messageDiv = document.createElement('div');
     const isOwn = msgData.username === window.CHAT_CONFIG.currentUser.username;
     messageDiv.className = `message ${isOwn ? 'message-own' : 'message-other'}`;

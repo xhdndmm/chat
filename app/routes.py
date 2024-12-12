@@ -44,6 +44,7 @@ ALLOWED_EXTENSIONS = {
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'webm', 'ogg'}
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -100,6 +101,9 @@ def logout():
 @bp.route('/')
 @login_required
 def index():
+    user_agent = request.headers.get('User-Agent').lower()
+    if 'mobile' in user_agent:
+        return redirect(url_for('main.mobile_chat'))
     return render_template('chat.html')
 
 
@@ -689,5 +693,41 @@ def upload_emoji():
         return jsonify({'success': True, 'url': url_for('static', filename=f'emojis/{filename}')})
     
     return jsonify({'error': '不支持的文件类型'}), 400
+
+@bp.route('/mobile')
+@login_required
+def mobile_chat():
+    return render_template('chat_mobile.html')
+
+@bp.route('/mobile/load_history')
+@login_required
+def load_history():
+    """加载历史消息的API"""
+    try:
+        # 获取所有消息并按时间戳排序
+        messages = list(current_app.db.messages.find().sort('timestamp', 1).limit(50))
+        
+        formatted_messages = []
+        for msg in messages:
+            # 处理消息格式
+            if isinstance(msg.get('message'), dict):
+                # 如果是新格式消息
+                formatted_messages.append(msg)
+            else:
+                # 如果是旧格式消息，转换为新格式
+                formatted_messages.append({
+                    'id': str(msg['_id']),
+                    'message': {
+                        'text': msg.get('text', ''),
+                        'username': msg.get('username', ''),
+                        'timestamp': msg.get('timestamp', datetime.now()).strftime('%H:%M'),
+                        'avatar_url': msg.get('avatar_url', '')
+                    }
+                })
+        
+        return jsonify(formatted_messages)
+    except Exception as e:
+        print(f"Error loading history: {e}")
+        return jsonify([])
 
 
