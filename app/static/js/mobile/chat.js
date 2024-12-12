@@ -136,14 +136,47 @@ function loadEmojis() {
 function loadStickers() {
     const stickersContent = document.getElementById('stickers-content');
     
-    fetch('/get_stickers')
+    // 获取贴纸包和单个贴纸
+    fetch('/get_sticker_packs')
         .then(response => response.json())
-        .then(stickers => {
-            stickersContent.innerHTML = stickers.map(sticker => `
-                <div class="sticker-item" onclick="insertSticker('${sticker.url}')">
-                    <img src="${sticker.url}" alt="sticker">
-                </div>
-            `).join('');
+        .then(packs => {
+            let html = '';
+            
+            // 处理单个贴纸（没有包名的贴纸）
+            const singleStickers = packs.filter(pack => typeof pack === 'string');
+            if (singleStickers.length > 0) {
+                html += `<div class="sticker-section">
+                    <div class="sticker-section-title">未分组贴纸</div>
+                    <div class="sticker-grid">`;
+                singleStickers.forEach(url => {
+                    html += `
+                        <div class="sticker-item" onclick="insertSticker('${url}')">
+                            <img src="${url}" alt="sticker">
+                        </div>`;
+                });
+                html += `</div></div>`;
+            }
+            
+            // 处理贴纸包
+            packs.filter(pack => pack.name && pack.stickers).forEach(pack => {
+                html += `
+                    <div class="sticker-section">
+                        <div class="sticker-section-title">${pack.name}</div>
+                        <div class="sticker-grid">`;
+                pack.stickers.forEach(url => {
+                    html += `
+                        <div class="sticker-item" onclick="insertSticker('${url}')">
+                            <img src="${url}" alt="sticker">
+                        </div>`;
+                });
+                html += `</div></div>`;
+            });
+            
+            stickersContent.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('加载贴纸失败:', error);
+            stickersContent.innerHTML = '<div class="error-message">加载贴纸失败</div>';
         });
 }
 
@@ -181,6 +214,9 @@ function toggleSidebar() {
 
 // 添加消息到聊天区域
 function appendMessage(data) {
+    // 添加调试日志
+    console.log('收到消息数据:', data);
+    
     const messages = document.getElementById('messages');
     const isOwn = data.username === window.CHAT_CONFIG.currentUser.username;
     
@@ -188,21 +224,66 @@ function appendMessage(data) {
     messageDiv.className = `message ${isOwn ? 'message-own' : ''}`;
     messageDiv.setAttribute('data-message-id', data.id);
     
-    // 处理贴纸消息
-    if (data.text && data.text.startsWith('[sticker]') && data.text.endsWith('[/sticker]')) {
-        const stickerUrl = data.text.replace('[sticker]', '').replace('[/sticker]', '');
-        messageDiv.innerHTML = `
-            <div class="message-content sticker-message">
-                <img src="${stickerUrl}" alt="sticker" class="sticker-image">
-            </div>
-        `;
-    } else {
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                ${data.text}
-            </div>
-        `;
+    // 格式化时间
+    let timeStr = '刚刚';
+    if (data.timestamp) {
+        try {
+            // 尝试解析 ISO 格式的时间戳
+            const messageTime = new Date(data.timestamp);
+            if (!isNaN(messageTime.getTime())) {
+                const now = new Date();
+                const isToday = messageTime.toDateString() === now.toDateString();
+                const isYesterday = new Date(now - 86400000).toDateString() === messageTime.toDateString();
+                
+                if (isToday) {
+                    timeStr = messageTime.toLocaleTimeString('zh-CN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                } else if (isYesterday) {
+                    timeStr = '昨天 ' + messageTime.toLocaleTimeString('zh-CN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                } else {
+                    timeStr = messageTime.toLocaleDateString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit'
+                    }) + ' ' + messageTime.toLocaleTimeString('zh-CN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('时间格式化错误:', e, data.timestamp);
+        }
     }
+    
+    // 处理贴纸消息
+    const messageContent = data.text && data.text.startsWith('[sticker]') && data.text.endsWith('[/sticker]')
+        ? `<div class="message-content sticker-message">
+             <img src="${data.text.replace('[sticker]', '').replace('[/sticker]', '')}" alt="sticker" class="sticker-image">
+           </div>`
+        : `<div class="message-content">
+             ${data.text}
+           </div>`;
+    
+    messageDiv.innerHTML = `
+        <div class="message-avatar">
+            <img src="${data.avatar_url}" alt="${data.username}">
+        </div>
+        <div class="message-body">
+            <div class="message-info">
+                <span class="message-username">${data.username}</span>
+                <span class="message-time">${timeStr}</span>
+            </div>
+            ${messageContent}
+        </div>
+    `;
     
     // 为自己发送的消息添加长按事件
     if (isOwn) {

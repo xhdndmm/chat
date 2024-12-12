@@ -199,29 +199,24 @@ def handle_connect():
 
 @socketio.on('message')
 @login_required
-def handle_message(data):
-    logger.info(f'Handling message from {current_user.username}: {data}')  # 添加日志
-    user_data = current_app.db.users.find_one({'username': current_user.username})
-    avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
+def handle_message(message):
+    # 添加调试日志
+    print('发送消息:', message)
     
-    message_id = str(ObjectId())
-    message_data = {
-        'id': message_id,
-        'text': data,
+    timestamp = datetime.now().isoformat()  # 使用 ISO 格式的时间戳
+    
+    data = {
         'username': current_user.username,
-        'avatar_url': avatar_url,
-        'timestamp': datetime.now().strftime('%H:%M'),
-        'status': 'sent',
-        'edited': False,
-        'type': 'text'
+        'text': message,
+        'avatar_url': current_user.get_avatar_url(),
+        'timestamp': timestamp,  # 添加时间戳
+        'id': str(ObjectId())  # 确保消息有唯一ID
     }
     
-    try:
-        current_app.db.messages.insert_one({'message': message_data})
-        emit('message', message_data, broadcast=True)
-        logger.info(f'Message sent successfully: {message_id}')  # 添加日志
-    except Exception as e:
-        logger.error(f'Error sending message: {str(e)}')  # 添加错误日志
+    # 添加调试日志
+    print('广播数据:', data)
+    
+    emit('message', data, broadcast=True)
 
 
 @socketio.on('edit_message')
