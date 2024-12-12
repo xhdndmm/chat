@@ -177,65 +177,51 @@ def reset_password(username):
 def handle_connect():
     if not current_user.is_authenticated:
         return False
-    
-    try:
-        # 获取所有消息并按时间排序
-        messages = list(current_app.db.messages.find().sort('created_at', 1))
-        
-        for message in messages:
-            if isinstance(message.get('message'), dict):
-                msg_data = message['message']
-                # 如果消息没有头像URL，尝试从用户数据获取
-                if 'avatar_url' not in msg_data:
-                    user_data = current_app.db.users.find_one({'username': msg_data['username']})
-                    if user_data and 'avatar_url' in user_data:
-                        msg_data['avatar_url'] = user_data['avatar_url']
-                emit('message', msg_data)
-            else:
-                # 处理旧格式的消息
-                user_data = current_app.db.users.find_one({'username': current_user.username})
-                msg_data = {
-                    'text': message.get('message', ''),
-                    'username': current_user.username,
-                    'avatar_url': user_data.get('avatar_url', 
-                        f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
-                    'timestamp': message.get('created_at', datetime.now()).isoformat()
-                }
-                emit('message', msg_data)
-        
-        print(f'已加载 {len(messages)} 条历史消息')
-        
-    except Exception as e:
-        print('加载历史消息错误:', str(e))
+    messages = current_app.db.messages.find()
+    for message in messages:
+        if isinstance(message.get('message'), dict):
+            msg_data = message['message']
+            # 如果消息没有头像URL，尝试从用户数据获取
+            if 'avatar_url' not in msg_data:
+                user_data = current_app.db.users.find_one({'username': msg_data['username']})
+                if user_data and 'avatar_url' in user_data:
+                    msg_data['avatar_url'] = user_data['avatar_url']
+        else:
+            user_data = current_app.db.users.find_one({'username': current_user.username})
+            msg_data = {
+                'text': message.get('message', ''),
+                'username': current_user.username,
+                'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
+                'timestamp': datetime.now().strftime('%H:%M')
+            }
+        emit('message', msg_data)
 
 
 @socketio.on('message')
 @login_required
-def handle_message(message):
+def handle_message(data):
+    logger.info(f'Handling message from {current_user.username}: {data}')  # 添加日志
+    user_data = current_app.db.users.find_one({'username': current_user.username})
+    avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
+    
+    message_id = str(ObjectId())
+    message_data = {
+        'id': message_id,
+        'text': data,
+        'username': current_user.username,
+        'avatar_url': avatar_url,
+        'timestamp': datetime.now().strftime('%H:%M'),
+        'status': 'sent',
+        'edited': False,
+        'type': 'text'
+    }
+    
     try:
-        # 创建消息数据
-        message_data = {
-            'id': str(ObjectId()),
-            'text': message,
-            'username': current_user.username,
-            'avatar_url': current_user.get_avatar_url(),
-            'timestamp': datetime.now().isoformat()
-        }
-        
-        # 保存消息到数据库
-        current_app.db.messages.insert_one({
-            'message': message_data,
-            'created_at': datetime.now()
-        })
-        
-        # 广播消息给所有客户端
+        current_app.db.messages.insert_one({'message': message_data})
         emit('message', message_data, broadcast=True)
-        
-        print('消息已保存并广播:', message_data)
-        
+        logger.info(f'Message sent successfully: {message_id}')  # 添加日志
     except Exception as e:
-        print('消息处理错误:', str(e))
-        emit('error', {'message': '消息发送失败'}, room=request.sid)
+        logger.error(f'Error sending message: {str(e)}')  # 添加错误日志
 
 
 @socketio.on('edit_message')
