@@ -100,6 +100,14 @@ def logout():
 @bp.route('/')
 @login_required
 def index():
+    # 通过 User-Agent 判断是否为移动设备
+    user_agent = request.headers.get('User-Agent', '').lower()
+    is_mobile = any(device in user_agent for device in ['iphone', 'android', 'mobile'])
+    
+    if is_mobile:
+        print("检测到移动设备，加载移动端模板")  # 添加调试日志
+        return render_template('mobile/chat.html')
+    print("检测到桌面设备，加载桌面端模板")  # 添加调试日志
     return render_template('chat.html')
 
 

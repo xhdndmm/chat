@@ -1,0 +1,411 @@
+:root {
+    --primary-color: #00a884;
+    --bg-color: #f0f2f5;
+    --text-color: #111b21;
+    --border-color: #e9edef;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.mobile-chat {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* 顶部导航 */
+.chat-header {
+    background: var(--primary-color);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.menu-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: white;
+}
+
+/* 侧边栏 */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    background: white;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar.active {
+    transform: translateX(280px);
+}
+
+.sidebar-header {
+    padding: 20px;
+    background: var(--primary-color);
+    color: white;
+}
+
+/* 聊天区域 */
+.chat-main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    background-color: var(--bg-color);
+}
+
+/* 消息样式 */
+.message {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    max-width: 85%;
+}
+
+.message-own {
+    flex-direction: row-reverse;
+    margin-left: auto;
+}
+
+.message-content {
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.message-own .message-content {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* 贴纸消息样式 */
+.message .sticker-message {
+    background: none;
+    padding: 0;
+    box-shadow: none;
+}
+
+.message .sticker-image {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 8px;
+    display: block;
+}
+
+/* 调整自己发送的贴纸位置 */
+.message-own .sticker-message {
+    margin-left: auto;
+}
+
+/* 底部输入区 */
+.chat-footer {
+    background: white;
+    padding: 8px;
+    border-top: 1px solid var(--border-color);
+}
+
+.message-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+/* 左侧按钮组 */
+.input-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.emoji-btn,
+.file-btn {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emoji-btn svg,
+.file-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: #666;
+}
+
+/* 输入框样式 */
+#message-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    outline: none;
+    margin-left: 0;  /* 移除左边距 */
+}
+
+/* 发送按钮样式 */
+.send-btn {
+    min-width: 60px;
+    height: 36px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 18px;
+    font-size: 14px;
+    padding: 0 16px;
+}
+
+/* 表情面板 */
+.emoji-panel {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 300px;
+    background: white;
+    border-top: 1px solid var(--border-color);
+    z-index: 100;
+}
+
+.emoji-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.tab-content {
+    display: none;
+    height: calc(100% - 45px);
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.tab-content.active {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+
+/* 消息操作菜单 */
+.message-actions-menu {
+    position: fixed;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    overflow: hidden;
+    transform: translate(-50%, -100%);
+    margin-top: -10px;
+}
+
+.action-item {
+    padding: 12px 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.action-item:active {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.edit-action {
+    color: var(--primary-color);
+}
+
+.delete-action {
+    color: #ff4d4f;
+}
+
+/* 编辑消息样式 */
+.edit-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.edit-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.save-edit,
+.cancel-edit {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.save-edit {
+    background: var(--primary-color);
+    color: white;
+}
+
+.cancel-edit {
+    background: #f0f0f0;
+    color: #666;
+}
+
+/* 编辑标记样式 */
+.edit-mark {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    margin-top: 4px;
+    text-align: right;
+}
+
+.message-own .edit-mark {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* 表情和贴纸面板样式 */
+.emoji-item,
+.sticker-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.emoji-item {
+    font-size: 24px;
+}
+
+.sticker-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.emoji-item:active,
+.sticker-item:active {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 上传进度条样式 */
+.upload-progress {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    background: white;
+    border-top: 1px solid var(--border-color);
+}
+
+.progress-bar {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0;
+    background: var(--primary-color);
+    transition: width 0.2s;
+}
+
+.progress-text {
+    font-size: 12px;
+    color: #666;
+    text-align: right;
+    margin-top: 4px;
+}
+
+/* 按钮图标样式 */
+.emoji-btn svg,
+.file-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: #666;
+}
+
+.emoji-btn:active svg,
+.file-btn:active svg {
+    fill: var(--primary-color);
+}
+
+/* 发送按钮样式 */
+.send-btn {
+    min-width: 60px;
+    height: 36px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 18px;
+    font-size: 14px;
+    padding: 0 16px;
+}
+
+.send-btn:active {
+    background: #008f6c;
+} 
