@@ -8,12 +8,17 @@ const messages = document.getElementById('messages');
 const fileInput = document.getElementById('file-input');
 const emojiBtn = document.querySelector('.emoji-btn');
 const emojiPanel = document.getElementById('emoji-panel');
+const stickerPanel = document.getElementById('sticker-panel');
+const emojis = document.querySelectorAll('.emoji');
 
 // 添加调试日志
 console.log('Mobile chat.js loaded');
 
 // 记录是否已加载历史消息
 let historyLoaded = false;
+
+// 初始化表情面板
+initEmojiPanel(emojiBtn, emojiPanel, emojis, input);
 
 // Socket.IO 事件处理
 socket.on('connect', () => {
@@ -290,3 +295,219 @@ document.querySelector('.sidebar-overlay')?.addEventListener('click', function()
         document.body.style.overflow = '';
     }
 });
+
+// 切换表情/贴纸面板
+function switchPanel(type) {
+    const emojiPanel = document.getElementById('emoji-panel');
+    const stickerPanel = document.getElementById('sticker-panel');
+    const tabs = document.querySelectorAll('.panel-tab');
+    
+    // 更新标签状态
+    tabs.forEach(tab => {
+        if (tab.textContent.includes(type === 'emoji' ? '表情' : '贴纸')) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+    
+    if (type === 'emoji') {
+        emojiPanel.querySelector('.emoji-grid').style.display = 'grid';
+        stickerPanel.style.display = 'none';
+        stickerPanel.classList.remove('show');
+        if (!emojiPanel.classList.contains('show')) {
+            loadStickers(); // 预加载贴纸
+        }
+        emojiPanel.classList.add('show');
+    } else {
+        emojiPanel.querySelector('.emoji-grid').style.display = 'none';
+        emojiPanel.classList.remove('show');
+        stickerPanel.style.display = 'flex';
+        stickerPanel.classList.add('show');
+        loadStickers();
+    }
+}
+
+// 修改初始化表情面板函数
+function initEmojiPanel(emojiBtn, emojiPanel, emojis, input) {
+    let isAnimating = false;
+    
+    // 添加点击事件监听器来关闭面板
+    document.addEventListener('click', (e) => {
+        if (!emojiPanel.contains(e.target) && 
+            !document.getElementById('sticker-panel').contains(e.target) && 
+            !emojiBtn.contains(e.target)) {
+            if (isAnimating) return;
+            isAnimating = true;
+            emojiPanel.classList.remove('show');
+            document.getElementById('sticker-panel').classList.remove('show');
+            setTimeout(() => {
+                emojiPanel.style.display = 'none';
+                document.getElementById('sticker-panel').style.display = 'none';
+                isAnimating = false;
+            }, 300);
+        }
+    });
+
+    emojiBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isAnimating) return;
+        
+        console.log('Emoji button clicked');
+        
+        isAnimating = true;
+        
+        if (emojiPanel.classList.contains('show') || stickerPanel.classList.contains('show')) {
+            emojiPanel.classList.remove('show');
+            stickerPanel.classList.remove('show');
+            setTimeout(() => {
+                emojiPanel.style.display = 'none';
+                stickerPanel.style.display = 'none';
+                isAnimating = false;
+            }, 300);
+        } else {
+            emojiPanel.style.display = 'flex';
+            // 默认显示表情面板
+            switchPanel('emoji');
+            requestAnimationFrame(() => {
+                emojiPanel.classList.add('show');
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 300);
+            });
+        }
+    });
+    
+    emojis.forEach(emoji => {
+        emoji.addEventListener('click', function() {
+            const emojiText = this.getAttribute('data-emoji');
+            console.log('Emoji clicked:', emojiText);
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            input.value = input.value.slice(0, start) + emojiText + input.value.slice(end);
+            input.focus();
+            const newCursorPos = start + emojiText.length;
+            input.setSelectionRange(newCursorPos, newCursorPos);
+            input.dispatchEvent(new Event('input'));
+            if (isAnimating) return;
+            isAnimating = true;
+            emojiPanel.classList.remove('show');
+            setTimeout(() => {
+                if (!emojiPanel.classList.contains('show')) {
+                    emojiPanel.style.display = 'none';
+                    isAnimating = false;
+                }
+            }, 300);
+        });
+    });
+}
+
+// 切换标签页
+function showTab(tabId) {
+    const tabs = document.querySelectorAll('.tab-content');
+    const buttons = document.querySelectorAll('.tab-button');
+    
+    // 隐藏所有标签页内容
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+        tab.style.display = 'none';
+    });
+    
+    // 移除所有按钮的激活状态
+    buttons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // 显示选中的标签页
+    const selectedTab = document.getElementById(tabId);
+    selectedTab.classList.add('active');
+    selectedTab.style.display = 'flex';
+    
+    // 激活对应的按钮
+    document.querySelector(`[onclick*="${tabId}"]`).classList.add('active');
+    
+    // 如果是贴纸标签页，加载贴纸
+    if (tabId === 'stickers-tab') {
+        loadStickers();
+    }
+}
+
+// 加载贴纸
+async function loadStickers() {
+    const container = document.querySelector('.sticker-container');
+    if (!container) return;
+
+    try {
+        const response = await fetch('/get_sticker_packs');
+        const packs = await response.json();
+
+        container.innerHTML = ''; // 清空现有内容
+
+        packs.forEach(pack => {
+            const packDiv = document.createElement('div');
+            packDiv.className = 'sticker-pack';
+
+            pack.stickers.forEach(stickerUrl => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'sticker-wrapper';
+
+                const fileExt = stickerUrl.split('.').pop().toLowerCase();
+                let element;
+
+                if (fileExt === 'webm') {
+                    element = document.createElement('video');
+                    element.src = stickerUrl;
+                    element.className = 'sticker-image webm-sticker';
+                    element.autoplay = true;
+                    element.loop = true;
+                    element.muted = true;
+                    element.playsInline = true;
+                } else {
+                    element = document.createElement('img');
+                    element.src = stickerUrl;
+                    element.className = 'sticker-image';
+                }
+
+                element.onclick = () => {
+                    insertSticker(stickerUrl);
+                };
+
+                wrapper.appendChild(element);
+                packDiv.appendChild(wrapper);
+            });
+
+            container.appendChild(packDiv);
+        });
+    } catch (error) {
+        console.error('加载贴纸失败:', error);
+        container.innerHTML = '<div class="error-message">加载贴纸失败</div>';
+    }
+}
+
+// 插入贴纸
+function insertSticker(url) {
+    socket.emit('message', `[sticker]${url}[/sticker]`);
+    
+    // 关闭表情面板和贴纸面板
+    const emojiPanel = document.getElementById('emoji-panel');
+    const stickerPanel = document.getElementById('sticker-panel');
+    emojiPanel.classList.remove('show');
+    stickerPanel.classList.remove('show');
+    setTimeout(() => {
+        emojiPanel.style.display = 'none';
+        stickerPanel.style.display = 'none';
+        // 重置选项卡状态为表情
+        const tabs = document.querySelectorAll('.panel-tab');
+        tabs.forEach(tab => {
+            if (tab.textContent.includes('表情')) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+        // 重置面板显示状态
+        emojiPanel.querySelector('.emoji-grid').style.display = 'grid';
+        stickerPanel.style.display = 'none';
+    }, 300);
+}

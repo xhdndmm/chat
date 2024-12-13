@@ -333,6 +333,118 @@
             background: rgba(255, 0, 0, 0.1);
             border-radius: 8px;
         }
+
+        /* 表情栏样式 */
+        #emoji-tab {
+            width: 100vw;
+            box-sizing: border-box;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: calc(50vh - 50px);
+            overflow-y: auto;
+            background: white;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            width: 100vw;
+            box-sizing: border-box;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            top: 0;
+            height: calc(50vh - 50px);
+        }
+
+        .emoji {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            user-select: none;
+            touch-action: manipulation;
+            cursor: pointer;
+            width: 100%;
+            aspect-ratio: 1;
+            min-width: 0;
+            box-sizing: border-box;
+            margin: 0;
+            height: calc((100vw - 70px) / 7);
+        }
+
+        .emoji:active {
+            background-color: rgba(0, 206, 209, 0.1);
+            transform: scale(0.95);
+        }
+
+        /* 贴纸栏样式 */
+        #sticker-tab {
+            width: 100vw;
+            box-sizing: border-box;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: calc(50vh - 50px);
+            overflow-y: auto;
+            background: white;
+        }
+
+        .sticker-container {
+            padding: 0 8px;
+            background: white;
+            flex: 1;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .sticker-pack {
+            margin-bottom: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 0 8px;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: fit-content;
+            background: white;
+        }
+
+        .sticker-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: calc((100vw - 60px) / 4);
+            margin-bottom: 0;
+        }
+
+        .sticker-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: transform 0.2s;
+            background-color: transparent;
+            padding: 6px;
+        }
+
+        .sticker-image:active {
+            transform: scale(0.9);
+        }
     </style>
 </head>
 <body>
@@ -494,6 +606,33 @@
             <span class="close-preview">&times;</span>
             <img id="previewImage" src="" alt="预览图片">
         </div>
+    </div>
+
+    <!-- 表情面板 -->
+    <div id="emoji-panel" class="emoji-panel" style="display: none;">
+        <div class="panel-tabs">
+            <button class="panel-tab active" onclick="switchPanel('emoji')">表情</button>
+            <button class="panel-tab" onclick="switchPanel('sticker')">贴纸</button>
+        </div>
+        <div class="emoji-grid">
+            <span class="emoji" data-emoji="😊">😊</span>
+            <span class="emoji" data-emoji="😂">😂</span>
+            <span class="emoji" data-emoji="🤣">🤣</span>
+            <span class="emoji" data-emoji="😅">😅</span>
+            <span class="emoji" data-emoji="😆">😆</span>
+            <span class="emoji" data-emoji="😉">😉</span>
+            <span class="emoji" data-emoji="😋">😋</span>
+            <span class="emoji" data-emoji="😎">😎</span>
+        </div>
+    </div>
+
+    <!-- 贴纸面板 -->
+    <div id="sticker-panel" class="sticker-panel" style="display: none;">
+        <div class="panel-tabs">
+            <button class="panel-tab" onclick="switchPanel('emoji')">表情</button>
+            <button class="panel-tab active" onclick="switchPanel('sticker')">贴纸</button>
+        </div>
+        <div class="sticker-container"></div>
     </div>
 
     <script>

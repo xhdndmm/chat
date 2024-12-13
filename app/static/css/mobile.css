@@ -309,4 +309,293 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-} 
+}
+
+/* 移动端表情面板样式 */
+.emoji-panel, .sticker-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50vh;
+    background: white;
+    border-top: 1px solid var(--border-color);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    border-radius: 16px 16px 0 0;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.emoji-panel.show, .sticker-panel.show {
+    transform: translateY(0);
+}
+
+/* 调整输入区域样式 */
+.message-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    border-top: 1px solid var(--border-color);
+    padding: 10px;
+    height: 60px;
+    box-sizing: border-box;
+}
+
+/* 当表情面板打开时，移动输入框到表情面板上方 */
+.emoji-panel.show ~ .message-input,
+.sticker-panel.show ~ .message-input {
+    transform: translateY(-50vh);
+}
+
+.emoji-tabs {
+    display: flex;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    background: #f8f9fa;
+    border-radius: 16px 16px 0 0;
+    position: relative;
+    z-index: 1;
+    height: 50px;
+    box-sizing: border-box;
+}
+
+/* 添加拖动条示意 */
+.emoji-panel::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background-color: #ddd;
+    border-radius: 2px;
+}
+
+.tab-button {
+    padding: 8px;
+    border: none;
+    background: none;
+    color: #666;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex: 1;
+    text-align: center;
+    position: relative;
+    line-height: 34px;
+}
+
+.tab-button.active {
+    background: rgba(0, 206, 209, 0.1);
+    color: #00CED1;
+}
+
+.tab-contents {
+    flex: 1;
+    overflow: hidden;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    padding: 0;
+    margin: 0;
+    position: relative;
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+}
+
+.tab-content {
+    display: none;
+    height: calc(50vh - 50px);
+    overflow-y: auto;
+    width: 100vw;
+    flex: 1;
+    background: white;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+    margin: 0;
+    overflow-x: hidden;
+    position: absolute;
+    left: 0;
+    top: 50px;
+    bottom: 0;
+    box-sizing: border-box;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+}
+
+/* 表情栏样式 */
+#emoji-tab {
+    width: 100vw;
+    box-sizing: border-box;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: calc(50vh - 50px);
+    overflow-y: auto;
+    background: white;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 0 8px;
+    background: white;
+    width: 100vw;
+    box-sizing: border-box;
+    margin: 0;
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    top: 0;
+    height: calc((100vw - 60px) / 4);
+    aspect-ratio: 1;
+}
+
+.emoji {
+    font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 8px;
+    transition: all 0.2s;
+    user-select: none;
+    touch-action: manipulation;
+    cursor: pointer;
+    width: 100%;
+    height: calc((100vw - 60px) / 4);
+    aspect-ratio: 1;
+}
+
+.emoji:active {
+    background-color: rgba(0, 206, 209, 0.1);
+    transform: scale(0.95);
+}
+
+/* 贴纸栏样式 */
+#sticker-tab {
+    width: 100vw;
+    box-sizing: border-box;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: calc(50vh - 50px);
+    overflow-y: auto;
+    background: white;
+}
+
+.sticker-container {
+    padding: 0 8px 8px;
+    background: white;
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sticker-pack {
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 0 8px;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: fit-content;
+    background: white;
+}
+
+.sticker-wrapper {
+    position: relative;
+    width: 100%;
+    padding-bottom: calc((100vw - 60px) / 4);
+    margin-bottom: 0;
+}
+
+.sticker-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: transform 0.2s;
+    background-color: transparent;
+    padding: 6px;
+}
+
+.sticker-image:active {
+    transform: scale(0.9);
+}
+
+/* 错误消息样式 */
+.error-message {
+    color: #ff4d4f;
+    text-align: center;
+    padding: 16px;
+}
+
+/* webm 贴纸样式 */
+.webm-sticker {
+    background: transparent;
+}
+
+/* 调整贴纸包间距 */
+.sticker-pack + .sticker-pack {
+    margin-top: 8px;
+}
+
+/* 面板标签栏样式 */
+.panel-tabs {
+    display: flex;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    background: #f8f9fa;
+    border-radius: 16px 16px 0 0;
+    margin-bottom: 0;
+}
+
+.panel-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: #666;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.panel-tab.active {
+    background: rgba(0, 206, 209, 0.1);
+    color: #00CED1;
+}
