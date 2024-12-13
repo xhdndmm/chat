@@ -256,3 +256,37 @@ fileInput.addEventListener('change', function(e) {
 
     fileInput.value = '';
 });
+
+// 添加侧边栏切换功能
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (sidebar) {
+        sidebar.classList.toggle('open');
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    } else {
+        console.error('未找到 .sidebar 元素');
+    }
+}
+
+// 点击侧边栏外部区域时关闭侧边栏
+document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.sidebar');
+    const menuButton = document.querySelector('.nav-icon');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    if (sidebar && !sidebar.contains(event.target) && 
+        menuButton && !menuButton.contains(event.target)) {
+        sidebar.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+});
+
+// 添加遮罩层点击事件
+document.querySelector('.sidebar-overlay')?.addEventListener('click', function() {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+});
