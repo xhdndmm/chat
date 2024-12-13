@@ -493,7 +493,7 @@
     transform: scale(0.95);
 }
 
-/* 贴纸栏样式 */
+/* 贴纸面板样式 */
 #sticker-tab {
     width: 100vw;
     box-sizing: border-box;
@@ -505,39 +505,62 @@
     background: white;
 }
 
-.sticker-container {
-    padding: 0 8px 8px;
-    background: white;
-    flex: 1;
+/* 贴纸包上传区域 */
+.sticker-packs {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
     width: 100%;
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    margin-top: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    background: white;
+    border-bottom: 1px solid var(--border-color);
 }
 
+/* 贴纸包容器 */
+.sticker-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 贴纸包 */
 .sticker-pack {
+    max-width: 65%;
+    margin: 8px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 贴纸包标题 */
+.pack-header {
+    padding: 4px 12px;
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 8px;
+}
+
+/* 贴纸网格 */
+.sticker-grid {
+    padding: 6px 8px 8px;
+    border-radius: 8px;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
-    padding: 0 8px;
-    width: 100%;
-    box-sizing: border-box;
-    min-height: fit-content;
-    background: white;
 }
 
+/* 贴纸包装器 */
 .sticker-wrapper {
     position: relative;
     width: 100%;
-    padding-bottom: calc((100vw - 60px) / 4);
-    margin-bottom: 0;
+    padding-bottom: 100%;
 }
 
+/* 贴纸图片 */
 .sticker-image {
     position: absolute;
     top: 0;
@@ -547,20 +570,36 @@
     object-fit: contain;
     cursor: pointer;
     border-radius: 8px;
-    transition: transform 0.2s;
-    background-color: transparent;
-    padding: 6px;
 }
 
-.sticker-image:active {
-    transform: scale(0.9);
+/* 贴纸包上传按钮 */
+.pack-upload-box {
+    width: calc(50% - 4px);
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #ddd;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.8);
 }
 
-/* 错误消息样式 */
-.error-message {
-    color: #ff4d4f;
-    text-align: center;
-    padding: 16px;
+.pack-upload-box:active {
+    background: rgba(0, 206, 209, 0.1);
+    border-color: #00CED1;
+}
+
+.upload-icon-large {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+}
+
+.upload-icon-large svg {
+    width: 100%;
+    height: 100%;
+    fill: #666;
 }
 
 /* webm 贴纸样式 */
@@ -568,9 +607,11 @@
     background: transparent;
 }
 
-/* 调整贴纸包间距 */
-.sticker-pack + .sticker-pack {
-    margin-top: 8px;
+/* 错误消息样式 */
+.error-message {
+    color: #ff4d4f;
+    text-align: center;
+    padding: 16px;
 }
 
 /* 面板标签栏样式 */

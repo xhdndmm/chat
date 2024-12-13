@@ -445,6 +445,76 @@
         .sticker-image:active {
             transform: scale(0.9);
         }
+
+        /* 贴纸包标题样式 */
+        .pack-header {
+            padding: 12px 16px 8px;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pack-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* 贴纸包上传按钮 */
+        .pack-upload-box {
+            width: calc(50% - 4px);
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.8);
+            margin-bottom: 8px;
+        }
+
+        .pack-upload-box:active {
+            background: rgba(0, 206, 209, 0.1);
+            border-color: #00CED1;
+        }
+
+        .upload-icon-large {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 8px;
+        }
+
+        .upload-icon-large svg {
+            width: 100%;
+            height: 100%;
+            fill: #666;
+        }
+
+        /* 贴纸删除按钮 */
+        .sticker-delete-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff4d4f;
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1;
+        }
+
+        .sticker-wrapper:active .sticker-delete-btn {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -632,7 +702,45 @@
             <button class="panel-tab" onclick="switchPanel('emoji')">表情</button>
             <button class="panel-tab active" onclick="switchPanel('sticker')">贴纸</button>
         </div>
-        <div class="sticker-container"></div>
+        <div id="sticker-tab" class="tab-content">
+            <!-- 贴纸包上传区域 -->
+            <div class="sticker-packs">
+                <div class="pack-upload-box" onclick="document.getElementById('pack-upload-input').click()">
+                    <div class="upload-icon-large">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                    </div>
+                    <span>导入贴纸包</span>
+                </div>
+                <div class="pack-upload-box" onclick="document.getElementById('sticker-upload-input').click()">
+                    <div class="upload-icon-large">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                    </div>
+                    <span>导入单个贴纸</span>
+                </div>
+                <input type="file" id="pack-upload-input" style="display: none" 
+                       accept=".zip" onchange="uploadStickerPack(this)">
+                <input type="file" id="sticker-upload-input" style="display: none" 
+                       accept=".png,.jpg,.jpeg,.webm" onchange="uploadSticker(this)">
+            </div>
+            <div class="sticker-container">
+                <!-- 贴纸包 -->
+                <div class="sticker-pack">
+                    <div class="pack-header">
+                        <span class="pack-name">贴纸包名称</span>
+                    </div>
+                    <div class="sticker-grid">
+                        <!-- 贴纸内容 -->
+                        <div class="sticker-wrapper">
+                            <img src="贴纸URL" class="sticker-image" onclick="insertSticker('贴纸URL')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
