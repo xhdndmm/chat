@@ -6,6 +6,14 @@
     max-width: 70%;
 }
 
+/* 包含贴纸的消息内容样式 */
+.message-content:has(.message-sticker) {
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
 /* 图片消息样式 */
 .image-message {
     padding: 0 !important;
@@ -37,7 +45,7 @@
 }
 
 /* 自己发送的文本消息样式 */
-.message-own .message-content:not(:has(.message-image)):not(:has(.message-video)) {
+.message-own .message-content:not(:has(.message-image)):not(:has(.message-video)):not(:has(.message-sticker)) {
     background: #95ec69;
 }
 
@@ -64,6 +72,9 @@
     max-width: 120px;
     height: auto;
     vertical-align: top;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* 时间和用户名样式 */

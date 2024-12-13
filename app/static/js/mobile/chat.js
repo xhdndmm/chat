@@ -110,12 +110,25 @@ function appendMessage(msgData) {
 
     // 处理不同类型的消息
     if (typeof message.text === 'string' && message.text.startsWith('[sticker]')) {
-        // 处理贴纸消息
         const stickerUrl = message.text.replace('[sticker]', '').replace('[/sticker]', '');
-        const img = document.createElement('img');
-        img.src = stickerUrl;
-        img.className = 'message-sticker';
-        contentDiv.appendChild(img);
+        const fileExt = stickerUrl.split('.').pop().toLowerCase();
+        let element;
+
+        if (fileExt === 'webm') {
+            element = document.createElement('video');
+            element.src = stickerUrl;
+            element.autoplay = true;
+            element.loop = true;
+            element.muted = true;
+            element.playsInline = true;
+            element.className = 'message-sticker webm-sticker';
+        } else {
+            element = document.createElement('img');
+            element.src = stickerUrl;
+            element.className = 'message-sticker';
+        }
+
+        contentDiv.appendChild(element);
     } else if (typeof message.text === 'string' && message.text.includes('[image]') && message.text.includes('[/image]')) {
         // 处理图片消息
         const imageUrl = message.text.substring(
@@ -557,7 +570,7 @@ async function loadStickers() {
                 
                 element.onclick = () => insertSticker(url);
                 
-                // 添加删除按钮 - 所有用户都可以删除
+                // 添加删除按钮 - 所有用户都可以删���
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'sticker-delete-btn';
                 deleteBtn.innerHTML = '×';
