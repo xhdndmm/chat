@@ -25,7 +25,6 @@
                     <li>邮箱：</li>
                     <li>微信：</li>
                 </ul>
-                <form action="{{ url_for('main.register_request') }}" method="post">
                     <div class="form-group">
                         <label for="username">用户名</label>
                         <input type="text" id="username" name="username" required>
@@ -42,8 +41,6 @@
                 </form>
             </div>
             <a href="{{ url_for('main.login') }}" class="back-btn">返回登录</a>
-            <a href="{{ url_for('main.agreement') }}" class="back-btn">用户协议</a>
-            <a href="{{ url_for('main.register_request') }}" class="back-btn">提交注册申请</a>
         </div>
     </div>
 </body>
