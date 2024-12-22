@@ -21,6 +21,7 @@
                     </svg>
                     添加用户
                 </button>
+                <button class="import-btn" onclick="viewRegisterRequests()">查看注册申请</button>
             </div>
         </div>
 
@@ -72,6 +73,31 @@
                                 </svg>
                             </button>
                             {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% for request in register_requests %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="user-info">
+                            <span>{{ request.username }}</span>
+                        </td>
+                        <td>注册申请</td>
+                        <td>
+                            <span class="status-badge">待处理</span>
+                        </td>
+                        <td>{{ request.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td class="actions">
+                            <button class="action-btn approve" onclick="approveRequest('{{ request.username }}')" title="同意">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                            </button>
+                            <button class="action-btn reject" onclick="rejectRequest('{{ request.username }}')" title="拒绝">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/>
+                                </svg>
+                            </button>
                         </td>
                     </tr>
                     {% endfor %}

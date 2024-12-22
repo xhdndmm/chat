@@ -40,9 +40,45 @@ function resetPassword(username) {
     }
 }
 
+function viewRegisterRequests() {
+    fetch('/admin/register_requests')
+        .then(response => response.json())
+        .then(data => {
+            // 处理显示注册申请的逻辑
+        });
+}
+
+function approveRequest(username) {
+    if (confirm('确定要同意用户 ' + username + ' 的注册申请吗？')) {
+        fetch('/admin/approve_request/' + username, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+    }
+}
+
+function rejectRequest(username) {
+    if (confirm('确定要拒绝用户 ' + username + ' 的注册申请吗？')) {
+        fetch('/admin/reject_request/' + username, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+    }
+}
+
 // 点击模态框外部关闭
 window.onclick = function(event) {
     if (event.target == document.getElementById('userModal')) {
         hideModal();
     }
-} 
+}
