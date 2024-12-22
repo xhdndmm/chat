@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>移动聊天室</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <style>
+        /* 基础样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--chat-bg);
+        }
+
+        /* 聊天容器 */
+        .chat-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--chat-bg);
+        }
+
+        /* 顶部导航栏 */
+        .topbar {
+            height: 50px;
+            background-color: #00CED1; /* 青色 */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            color: white;
+            position: relative;
+            z-index: 100;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .nav-icons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        /* 修复菜单图标 */
+        .menu-icon {
+            width: 24px;
+            height: 24px;
+            position: relative;
+        }
+
+        .menu-icon path {
+            stroke: white;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        /* 聊天区域优化 */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            height: calc(100vh - 50px);  /* 减去顶部导航栏高度 */
+            padding-bottom: 60px; /* 为输入框留出空间 */
+            background-color: var(--chat-bg);
+        }
+
+        /* 消息列表容器 */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            padding-bottom: 16px;
+            -webkit-overflow-scrolling: touch; /* iOS 滚动优化 */
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background-color: var(--chat-bg);
+        }
+
+        /* 消息样式优化 */
+        .message {
+            max-width: 80%;
+            margin: 4px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-own {
+            align-self: flex-end;
+        }
+
+        .message-other {
+            align-self: flex-start;
+        }
+
+        /* 消息头部（用户名和时间） */
+        .message-header {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 2px;
+            padding: 0 12px;
+        }
+
+        /* 消息内容 */
+        .message-content {
+            padding: 8px 12px;
+            border-radius: 16px;
+            font-size: 15px;
+            line-height: 1.4;
+            word-break: break-word;
+            max-width: 100%;
+        }
+
+        .message-own .message-content {
+            background-color: var(--message-own-bg);
+            color: var(--text-color);
+        }
+
+        .message-other .message-content {
+            background-color: var(--message-other-bg);
+            color: var(--text-color);
+        }
+
+        /* 消息状态（已发送、已读等） */
+        .message-status {
+            font-size: 11px;
+            color: #999;
+            margin-top: 2px;
+            padding: 0 12px;
+        }
+
+        /* 消息中的图片 */
+        .message-image {
+            max-width: 250px;
+            max-height: 300px;
+            border-radius: 12px;
+            object-fit: contain;
+        }
+
+        /* 贴纸消息 */
+        .message-sticker {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 8px;
+            background: transparent;
+        }
+
+        .message-content img {
+            display: block;
+            margin: 0;
+        }
+
+        /* 调整贴纸消息的背景 */
+        .message-content:has(img.message-sticker) {
+            background: transparent !important;
+            padding: 0;
+        }
+
+        /* 调整贴纸消息的大小和间距 */
+        .message:has(.message-sticker) {
+            margin: 8px 0;
+        }
+
+        /* 确保贴纸图片不会被拉伸 */
+        .message-sticker {
+            object-fit: contain;
+        }
+
+        /* 输入区域固定在底部 */
+        .message-input {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: white;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-top: 1px solid var(--border-color);
+            z-index: 100;
+        }
+
+        /* 输入操作按钮组 */
+        .input-actions {
+            display: flex;
+            gap: 8px;
+            padding: 0 4px;
+        }
+
+        .message-input input[type="text"] {
+            flex: 1;
+            height: 36px;
+            border: none;
+            border-radius: 18px;
+            padding: 0 12px;
+            font-size: 15px;
+            background-color: var(--bg-color);
+        }
+
+        .emoji-btn, .file-upload-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .emoji-btn svg, .file-upload-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--primary-color);
+        }
+
+        button[type="submit"] {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        button[type="submit"]::before {
+            content: "→";
+            font-size: 20px;
+        }
+
+        /* 表情面板 */
+        .emoji-panel {
+            position: fixed;
+            bottom: 52px;
+            left: 0;
+            right: 0;
+            height: 250px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            display: none;
+        }
+
+        /* 触摸反馈 */
+        .message-content:active,
+        .emoji-btn:active,
+        .file-upload-btn:active,
+        button[type="submit"]:active {
+            opacity: 0.7;
+        }
+
+        .message-meta {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+            padding: 0 4px;
+        }
+
+        .message-own .message-meta {
+            text-align: right;
+        }
+
+        /* 视频消息样式 */
+        .message-video {
+            max-width: 250px;
+            max-height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .message-video video {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            background: #000;
+        }
+
+        /* 确保视频消息内容没有背景和内边距 */
+        .message-content:has(.message-video) {
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        /* 视频加载状态 */
+        .message-video.loading::before {
+            content: '视频加载中...';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            z-index: 1;
+        }
+
+        /* 视频错误状态 */
+        .message-video .error-message {
+            padding: 10px;
+            color: red;
+            text-align: center;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        /* 表情栏样式 */
+        #emoji-tab {
+            width: 100vw;
+            box-sizing: border-box;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: calc(50vh - 50px);
+            overflow-y: auto;
+            background: white;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            width: 100vw;
+            box-sizing: border-box;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            top: 0;
+            height: calc(50vh - 50px);
+        }
+
+        .emoji {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            user-select: none;
+            touch-action: manipulation;
+            cursor: pointer;
+            width: 100%;
+            aspect-ratio: 1;
+            min-width: 0;
+            box-sizing: border-box;
+            margin: 0;
+            height: calc((100vw - 70px) / 7);
+        }
+
+        .emoji:active {
+            background-color: rgba(0, 206, 209, 0.1);
+            transform: scale(0.95);
+        }
+
+        /* 贴纸栏样式 */
+        #sticker-tab {
+            width: 100vw;
+            box-sizing: border-box;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: calc(50vh - 50px);
+            overflow-y: auto;
+            background: white;
+        }
+
+        .sticker-container {
+            padding: 0 8px;
+            background: white;
+            flex: 1;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .sticker-pack {
+            margin-bottom: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 0 8px;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: fit-content;
+            background: white;
+        }
+
+        .sticker-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: calc((100vw - 60px) / 4);
+            margin-bottom: 0;
+        }
+
+        .sticker-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: transform 0.2s;
+            background-color: transparent;
+            padding: 6px;
+        }
+
+        .sticker-image:active {
+            transform: scale(0.9);
+        }
+
+        /* 贴纸包标题样式 */
+        .pack-header {
+            padding: 12px 16px 8px;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pack-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* 贴纸包上传按钮 */
+        .pack-upload-box {
+            width: calc(50% - 4px);
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.8);
+            margin-bottom: 8px;
+        }
+
+        .pack-upload-box:active {
+            background: rgba(0, 206, 209, 0.1);
+            border-color: #00CED1;
+        }
+
+        .upload-icon-large {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 8px;
+        }
+
+        .upload-icon-large svg {
+            width: 100%;
+            height: 100%;
+            fill: #666;
+        }
+
+        /* 贴纸删除按钮 */
+        .sticker-delete-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff4d4f;
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1;
+        }
+
+        .sticker-wrapper:active .sticker-delete-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        {% if current_user.is_admin %}
+            <a href="/admin" class="sidebar-item">
+        {% else %}
+            <a href="javascript:void(0)" onclick="alert('您没有管理员权限')" class="sidebar-item">
+        {% endif %}
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+            </svg>
+            <span>管理</span>
+        </a>
+        <a href="{{ url_for('main.settings') }}" class="sidebar-item">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+            </svg>
+            <span>设置</span>
+        </a>
+        <a href="{{ url_for('main.logout') }}" class="sidebar-item">
+            <svg viewBox="0 0 24 24">
+                <path d="M17,7l-1.41,1.41L18.17,11H8v2h10.17l-2.58,2.58L17,17l5-5L17,7z M4,5h8V3H4C2.9,3,2,3.9,2,5v14c0,1.1,0.9,2,2,2h8v-2H4V5z"/>
+            </svg>
+            <span>退出</span>
+        </a>
+
+        <!-- 开发人员列表 -->
+        <div class="dev-list">
+            <div class="dev-title">开发人员</div>
+            <a href="https://github.com/Seikoa" class="dev-link" target="_blank">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                <span>Seikoa</span>
+            </a>
+            <a href="https://github.com/ziyuan77-gev" class="dev-link" target="_blank">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                <span>ziyuan77</span>
+            </a>
+            <a href="https://github.com/xhdndmm" class="dev-link" target="_blank">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                <span>xhdndmm</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- 遮罩层 -->
+    <div class="sidebar-overlay"></div>
+    
+    <div class="chat-container">
+        <!-- 顶部导航栏 -->
+        <div class="topbar">
+            <div class="nav-icons">
+                <a href="javascript:void(0)" onclick="toggleSidebar()" class="nav-icon">
+                    <svg class="menu-icon" viewBox="0 0 24 24">
+                        <path d="M3 12h18"/>
+                        <path d="M3 6h18"/>
+                        <path d="M3 18h18"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="user-info" onclick="toggleUserMenu()">
+                <img src="{{ current_user.get_avatar_url() }}" alt="头像" class="user-avatar">
+                <div class="user-name">{{ current_user.username }}</div>
+            </div>
+        </div>
+
+        <!-- 聊天区域 -->
+        <div class="chat-area">
+            <div class="messages" id="messages">
+                <div class="message message-other">
+                    <div class="message-content">
+                        欢迎来到聊天室！
+                    </div>
+                    <div class="message-meta">
+                        System
+                    </div>
+                </div>
+            </div>
+
+            <!-- 输入区域 -->
+            <form id="message-form" class="message-input">
+                <div class="input-actions">
+                    <div class="emoji-btn">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-4-8c.61 0 1.1-.49 1.1-1.1 0-.61-.49-1.1-1.1-1.1-.61 0-1.1.49-1.1 1.1 0 .61.49 1.1 1.1 1.1zm8 0c.61 0 1.1-.49 1.1-1.1 0-.61-.49-1.1-1.1-1.1-.61 0-1.1.49-1.1 1.1 0 .61.49 1.1 1.1 1.1zm-4 4c2.21 0 4-1.79 4-4h-8c0 2.21 1.79 4 4 4z"/>
+                        </svg>
+                    </div>
+                    <label for="file-input" class="file-upload-btn">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                        </svg>
+                    </label>
+                </div>
+                <input type="text" id="input" placeholder="输入消息...">
+                <input type="file" id="file-input" style="display: none">
+                <button type="submit"></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 个人信息弹窗 -->
+    <div id="userInfoModal" class="modal">
+        <div class="modal-content user-info-modal">
+            <div class="modal-header">
+                <h3>用户信息</h3>
+                <button class="close-btn" onclick="closeUserInfoModal()">×</button>
+            </div>
+            <div class="user-info-content">
+                <img id="userInfoAvatar" src="" alt="用户头像" class="user-info-avatar">
+                <div class="info-group">
+                    <div class="info-item">
+                        <span class="label">用户名</span>
+                        <span id="userInfoUsername"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">显示名称</span>
+                        <span id="userInfoDisplayName"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">个人简介</span>
+                        <span id="userInfoBio"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息右键菜单 -->
+    <div id="contextMenu" class="context-menu">
+        <ul>
+            <li id="editMenuItem">编辑消息</li>
+            <li id="deleteMenuItem">删除消息</li>
+        </ul>
+    </div>
+
+    <!-- 修改贴纸预览模态框 -->
+    <div id="stickerPreviewModal" class="modal sticker-preview-modal">
+        <div class="modal-content">
+            <div class="preview-header">
+                <h3>贴纸包预览</h3>
+                <span class="close-preview">&times;</span>
+            </div>
+            <div class="preview-grid" id="previewGrid">
+                <!-- 贴纸将在这里动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片预览模态框 -->
+    <div id="imagePreviewModal" class="modal image-preview-modal">
+        <div class="modal-content">
+            <span class="close-preview">&times;</span>
+            <img id="previewImage" src="" alt="预览图片">
+        </div>
+    </div>
+
+    <!-- 表情面板 -->
+    <div id="emoji-panel" class="emoji-panel" style="display: none;">
+        <div class="panel-tabs">
+            <button class="panel-tab active" onclick="switchPanel('emoji')">表情</button>
+            <button class="panel-tab" onclick="switchPanel('sticker')">贴纸</button>
+        </div>
+        <div class="emoji-grid">
+            <span class="emoji" data-emoji="😊">😊</span>
+            <span class="emoji" data-emoji="😂">😂</span>
+            <span class="emoji" data-emoji="🤣">🤣</span>
+            <span class="emoji" data-emoji="😅">😅</span>
+            <span class="emoji" data-emoji="😆">😆</span>
+            <span class="emoji" data-emoji="😉">😉</span>
+            <span class="emoji" data-emoji="😋">😋</span>
+            <span class="emoji" data-emoji="😎">😎</span>
+        </div>
+    </div>
+
+    <!-- 贴纸面板 -->
+    <div id="sticker-panel" class="sticker-panel" style="display: none;">
+        <div class="panel-tabs">
+            <button class="panel-tab" onclick="switchPanel('emoji')">表情</button>
+            <button class="panel-tab active" onclick="switchPanel('sticker')">贴纸</button>
+        </div>
+        <div id="sticker-tab" class="tab-content">
+            <!-- 贴纸包上传区域 -->
+            <div class="sticker-packs">
+                <div class="pack-upload-box" onclick="document.getElementById('pack-upload-input').click()">
+                    <div class="upload-icon-large">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                    </div>
+                    <span>导入贴纸包</span>
+                </div>
+                <div class="pack-upload-box" onclick="document.getElementById('sticker-upload-input').click()">
+                    <div class="upload-icon-large">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                    </div>
+                    <span>导入单个贴纸</span>
+                </div>
+                <input type="file" id="pack-upload-input" style="display: none" 
+                       accept=".zip" onchange="uploadStickerPack(this)">
+                <input type="file" id="sticker-upload-input" style="display: none" 
+                       accept=".png,.jpg,.jpeg,.webm" onchange="uploadSticker(this)">
+            </div>
+            <div class="sticker-container">
+                <!-- 贴纸包 -->
+                <div class="sticker-pack">
+                    <div class="pack-header">
+                        <span class="pack-name">贴纸包名称</span>
+                    </div>
+                    <div class="sticker-grid">
+                        <!-- 贴纸内容 -->
+                        <div class="sticker-wrapper">
+                            <img src="贴纸URL" class="sticker-image" onclick="insertSticker('贴纸URL')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 添加全局配置
+        window.CHAT_CONFIG = {
+            currentUser: {
+                username: "{{ current_user.username }}",
+                avatar_url: "{{ current_user.get_avatar_url() }}"
+            }
+        };
+        
+        // 添加调试信息
+        console.log('CHAT_CONFIG:', window.CHAT_CONFIG);
+    </script>
+    <script src="{{ url_for('static', filename='js/mobile/chat.js') }}"></script>
+</body>
+</html>

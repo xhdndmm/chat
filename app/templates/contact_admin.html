@@ -22,12 +22,29 @@
             <div class="contact-info">
                 <p>联系方式：</p>
                 <ul>
-                    <li>邮箱：zhangzx1149@outlook.com</li>
-                    <li>微信：xhdndmm</li>
+                    <li>邮箱：</li>
+                    <li>微信：</li>
                 </ul>
+                <form action="{{ url_for('main.register_request') }}" method="post">
+                    <div class="form-group">
+                        <label for="username">用户名</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="info">信息</label>
+                        <textarea id="info" name="info" required></textarea>
+                    </div>
+                    <button type="submit" class="back-btn">提交注册申请</button>
+                </form>
             </div>
             <a href="{{ url_for('main.login') }}" class="back-btn">返回登录</a>
+            <a href="{{ url_for('main.agreement') }}" class="back-btn">用户协议</a>
+            <a href="{{ url_for('main.register_request') }}" class="back-btn">提交注册申请</a>
         </div>
     </div>
 </body>
-</html> 
+</html>

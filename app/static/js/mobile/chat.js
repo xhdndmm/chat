@@ -1,390 +1,738 @@
-let socket = io();
-let sidebar = document.getElementById('sidebar');
-let emojiPanel = document.getElementById('emoji-panel');
-let typingTimer;
+// 适用于移动端的聊天逻辑
+const socket = io();
 
-// 初始化
-document.addEventListener('DOMContentLoaded', () => {
-    initSocketEvents();
-    initMessageForm();
-    initEmojiPanel();
-    initFileUpload();
-    initSidebar();
-});
+// 获取 DOM 元素
+const form = document.getElementById('message-form');
+const input = document.getElementById('input');
+const messages = document.getElementById('messages');
+const fileInput = document.getElementById('file-input');
+const emojiBtn = document.querySelector('.emoji-btn');
+const emojiPanel = document.getElementById('emoji-panel');
+const stickerPanel = document.getElementById('sticker-panel');
+const emojis = document.querySelectorAll('.emoji');
 
-// 初始化 Socket.IO 事件
-function initSocketEvents() {
-    socket.on('message', (data) => {
-        appendMessage(data);
-    });
+// 添加调试日志
+console.log('Mobile chat.js loaded');
 
-    socket.on('typing_status', (data) => {
-        updateTypingStatus(data);
-    });
-
-    // 添加消息编辑事件监听
-    socket.on('message_edited', (data) => {
-        const messageDiv = document.querySelector(`[data-message-id="${data.id}"]`);
-        if (messageDiv) {
-            const contentDiv = messageDiv.querySelector('.message-content');
-            // 检查是否是贴纸消息
-            if (data.text.startsWith('[sticker]') && data.text.endsWith('[/sticker]')) {
-                const stickerUrl = data.text.replace('[sticker]', '').replace('[/sticker]', '');
-                contentDiv.innerHTML = `<img src="${stickerUrl}" alt="sticker" class="sticker-image">`;
-                contentDiv.className = 'message-content sticker-message';
-            } else {
-                contentDiv.textContent = data.text;
-                contentDiv.className = 'message-content';
-            }
-            
-            // 添加编辑标记
-            if (!messageDiv.querySelector('.edit-mark')) {
-                const editMark = document.createElement('div');
-                editMark.className = 'edit-mark';
-                editMark.textContent = '(已编辑)';
-                messageDiv.appendChild(editMark);
-            }
-        }
-    });
-
-    // 添加消息删除事件监听
-    socket.on('message_deleted', (data) => {
-        const messageDiv = document.querySelector(`[data-message-id="${data.id}"]`);
-        if (messageDiv) {
-            messageDiv.remove();
-        }
-    });
-}
-
-// 初始化消息表单
-function initMessageForm() {
-    const form = document.getElementById('message-form');
-    const input = document.getElementById('message-input');
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (input.value.trim()) {
-            socket.emit('message', input.value);
-            input.value = '';
-        }
-    });
-
-    // 输入状态
-    input.addEventListener('input', () => {
-        clearTimeout(typingTimer);
-        socket.emit('typing', { status: 'typing' });
-        
-        typingTimer = setTimeout(() => {
-            socket.emit('typing', { status: 'stopped' });
-        }, 2000);
-    });
-}
+// 记录是否已加载历史消息
+let historyLoaded = false;
 
 // 初始化表情面板
-function initEmojiPanel() {
-    const emojiBtn = document.getElementById('emoji-btn');
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const emojiContent = document.getElementById('emoji-content');
-    const stickersContent = document.getElementById('stickers-content');
+initEmojiPanel(emojiBtn, emojiPanel, emojis, input);
 
-    // 表情按钮点击事件
-    emojiBtn.addEventListener('click', () => {
-        emojiPanel.style.display = emojiPanel.style.display === 'none' ? 'block' : 'none';
-        if (emojiPanel.style.display === 'block') {
-            loadEmojis();
-            loadStickers();
-        }
-    });
+// Socket.IO 事件处理
+socket.on('connect', () => {
+    console.log('Socket connected');
+    if (!historyLoaded) {
+        requestHistoryMessages();
+    }
+});
 
-    // 标签切换
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            const tabName = btn.dataset.tab;
-            if (tabName === 'emoji') {
-                emojiContent.style.display = 'grid';
-                stickersContent.style.display = 'none';
-            } else {
-                emojiContent.style.display = 'none';
-                stickersContent.style.display = 'grid';
+socket.on('message', (data) => {
+    console.log('Received message:', data);
+    appendMessage(data);
+});
+
+// 添加重连逻辑
+socket.on('disconnect', () => {
+    console.log('Socket disconnected');
+});
+
+socket.on('reconnect', () => {
+    console.log('Socket reconnected');
+    // 重新加载历史消息
+    requestHistoryMessages();
+});
+
+// 请求历史消息
+function requestHistoryMessages() {
+    console.log('Requesting history messages');
+    messages.innerHTML = '';
+
+    fetch('/mobile/load_history')
+        .then(response => response.json())
+        .then(historyMessages => {
+            console.log('Received history messages:', historyMessages);
+            if (Array.isArray(historyMessages)) {
+                // 不需要排序，服务器已经排序好了
+                historyMessages.forEach(msg => {
+                    console.log('Processing history message:', msg); // 添加调试日志
+                    appendMessage(msg);
+                });
             }
+            historyLoaded = true;
+            messages.scrollTop = messages.scrollHeight;
+        })
+        .catch(error => {
+            console.error('Error loading history:', error);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = '加载历史消息失败，请刷新重试';
+            messages.appendChild(errorDiv);
         });
+}
+
+// 添加消息到界面
+function appendMessage(msgData) {
+    console.log('Raw message data:', msgData);
+
+    // 处理文件类型消息
+    if (msgData.type === 'file') {
+        const messageText = msgData.url.toLowerCase().endsWith('.mp4') ?
+            `[video]${msgData.url}[/video]` :
+            msgData.url.match(/\.(jpg|jpeg|png|gif)$/i) ?
+            `[image]${msgData.url}[/image]` :
+            `[file]${msgData.url}[/file]`;
+
+        msgData = {
+            id: msgData.id,
+            text: messageText,
+            username: msgData.username,
+            timestamp: msgData.timestamp,
+            avatar_url: msgData.avatar_url
+        };
+    }
+
+    // 确保消息格式一致
+    const message = msgData;
+    if (!message || typeof message.text === 'object') {
+        message.text = message.text.text || '';
+    }
+
+    console.log('Processed message:', message);
+    console.log('Message text:', message.text);
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${message.username === window.CHAT_CONFIG.currentUser.username ? 'message-own' : 'message-other'}`;
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+
+    // 处理不同类型的消息
+    if (typeof message.text === 'string' && message.text.startsWith('[sticker]')) {
+        const stickerUrl = message.text.replace('[sticker]', '').replace('[/sticker]', '');
+        const fileExt = stickerUrl.split('.').pop().toLowerCase();
+        let element;
+
+        if (fileExt === 'webm') {
+            element = document.createElement('video');
+            element.src = stickerUrl;
+            element.autoplay = true;
+            element.loop = true;
+            element.muted = true;
+            element.playsInline = true;
+            element.className = 'message-sticker webm-sticker';
+        } else {
+            element = document.createElement('img');
+            element.src = stickerUrl;
+            element.className = 'message-sticker';
+        }
+
+        contentDiv.appendChild(element);
+    } else if (typeof message.text === 'string' && message.text.includes('[image]') && message.text.includes('[/image]')) {
+        // 处理图片消息
+        const imageUrl = message.text.substring(
+            message.text.indexOf('[image]') + 7,
+            message.text.indexOf('[/image]')
+        );
+        // 设置消息内容的特殊类名
+        contentDiv.className = 'message-content image-message';
+
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.className = 'message-image';
+
+        // 添加图片加载事件
+        img.onload = () => {
+            messages.scrollTop = messages.scrollHeight;
+        };
+
+        contentDiv.appendChild(img);
+    } else if (typeof message.text === 'string' && message.text.includes('[video]') && message.text.includes('[/video]')) {
+        // 处理视频消息
+        const videoUrl = message.text.substring(
+            message.text.indexOf('[video]') + 7,
+            message.text.indexOf('[/video]')
+        );
+        console.log('Creating video element for URL:', videoUrl);
+
+        const videoContainer = document.createElement('div');
+        videoContainer.className = 'message-video';
+
+        const video = document.createElement('video');
+        video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
+        video.src = videoUrl;
+
+        videoContainer.appendChild(video);
+        contentDiv.appendChild(videoContainer);
+    } else {
+        // 处理普通文本消息
+        contentDiv.textContent = message.text;
+    }
+
+    messageDiv.appendChild(contentDiv);
+
+    if (message.username && message.timestamp) {
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'message-meta';
+        metaDiv.textContent = `${message.username} ${message.timestamp}`;
+        messageDiv.appendChild(metaDiv);
+    }
+
+    messages.appendChild(messageDiv);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+// 发送消息
+form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const messageText = input.value.trim();
+
+    if (messageText) {
+        console.log('Sending message:', messageText);
+        // 修改消息格式，直接发送文本
+        const messageData = {
+            text: messageText,
+            username: window.CHAT_CONFIG.currentUser.username,
+            timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            avatar_url: window.CHAT_CONFIG.currentUser.avatar_url
+        };
+        socket.emit('message', messageData);
+        input.value = '';
+    }
+});
+
+// 错误处理
+socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error);
+});
+
+socket.on('error', (error) => {
+    console.error('Socket error:', error);
+});
+
+window.onerror = function(msg, url, line, col, error) {
+    console.error('Global error:', {msg, url, line, col, error});
+};
+
+// 添加窗口大小改变时的处理
+window.addEventListener('resize', () => {
+    // 当键盘弹出或收起时，确保滚动到底部
+    requestAnimationFrame(() => {
+        messages.scrollTop = messages.scrollHeight;
+    });
+});
+
+// 添加初始加载完成后的处理
+window.addEventListener('load', () => {
+    // 确保初始加载时滚动到底部
+    requestAnimationFrame(() => {
+        messages.scrollTop = messages.scrollHeight;
+    });
+});
+
+// 修改文件上传处理
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/mobile/upload_file', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.url) {
+            let messageText;
+            if (data.type.startsWith('video/')) {
+                messageText = `[video]${data.url}[/video]`;
+            } else if (data.type.startsWith('image/')) {
+                messageText = `[image]${data.url}[/image]`;
+            } else {
+                messageText = `[file]${data.url}[/file]`;
+            }
+            // 修改文件消息格式
+            const messageData = {
+                text: messageText,
+                username: window.CHAT_CONFIG.currentUser.username,
+                timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                avatar_url: window.CHAT_CONFIG.currentUser.avatar_url
+            };
+            console.log('Sending file message:', messageData);
+            socket.emit('message', messageData);
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading file:', error);
+        alert('文件上传失败，请重试');
     });
 
-    // 点击其他地方关闭面板
-    document.addEventListener('click', (e) => {
-        if (!emojiPanel.contains(e.target) && !emojiBtn.contains(e.target)) {
-            emojiPanel.style.display = 'none';
+    fileInput.value = '';
+});
+
+// 添加侧边栏切换功能
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (sidebar) {
+        sidebar.classList.toggle('open');
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    } else {
+        console.error('未找到 .sidebar 元素');
+    }
+}
+
+// 点击侧边栏外部区域时关闭侧边栏
+document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.sidebar');
+    const menuButton = document.querySelector('.nav-icon');
+    const overlay = document.querySelector('.sidebar-overlay');
+
+    if (sidebar && !sidebar.contains(event.target) &&
+        menuButton && !menuButton.contains(event.target)) {
+        sidebar.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+});
+
+// 添加遮罩层点击事件
+document.querySelector('.sidebar-overlay')?.addEventListener('click', function() {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+});
+
+// 切换表情/贴纸面板
+function switchPanel(type) {
+    const emojiPanel = document.getElementById('emoji-panel');
+    const stickerPanel = document.getElementById('sticker-panel');
+    const tabs = document.querySelectorAll('.panel-tab');
+
+    // 更新标签状态
+    tabs.forEach(tab => {
+        if (tab.textContent.includes(type === 'emoji' ? '表情' : '贴纸')) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
         }
+    });
+
+    if (type === 'emoji') {
+        emojiPanel.querySelector('.emoji-grid').style.display = 'grid';
+        stickerPanel.style.display = 'none';
+        stickerPanel.classList.remove('show');
+        if (!emojiPanel.classList.contains('show')) {
+            loadStickers(); // 预加载贴纸
+        }
+        emojiPanel.classList.add('show');
+    } else {
+        emojiPanel.querySelector('.emoji-grid').style.display = 'none';
+        emojiPanel.classList.remove('show');
+        stickerPanel.style.display = 'flex';
+        stickerPanel.classList.add('show');
+        loadStickers();
+    }
+}
+
+// 修改初始化表情面板函数
+function initEmojiPanel(emojiBtn, emojiPanel, emojis, input) {
+    let isAnimating = false;
+
+    // 添加点击事件监听器来关闭面板
+    document.addEventListener('click', (e) => {
+        if (!emojiPanel.contains(e.target) &&
+            !document.getElementById('sticker-panel').contains(e.target) &&
+            !emojiBtn.contains(e.target)) {
+            if (isAnimating) return;
+            isAnimating = true;
+            emojiPanel.classList.remove('show');
+            document.getElementById('sticker-panel').classList.remove('show');
+            setTimeout(() => {
+                emojiPanel.style.display = 'none';
+                document.getElementById('sticker-panel').style.display = 'none';
+                isAnimating = false;
+            }, 300);
+        }
+    });
+
+    emojiBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isAnimating) return;
+
+        console.log('Emoji button clicked');
+
+        isAnimating = true;
+
+        if (emojiPanel.classList.contains('show') || stickerPanel.classList.contains('show')) {
+            emojiPanel.classList.remove('show');
+            stickerPanel.classList.remove('show');
+            setTimeout(() => {
+                emojiPanel.style.display = 'none';
+                stickerPanel.style.display = 'none';
+                isAnimating = false;
+            }, 300);
+        } else {
+            emojiPanel.style.display = 'flex';
+            // 默认显示表情面板
+            switchPanel('emoji');
+            requestAnimationFrame(() => {
+                emojiPanel.classList.add('show');
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 300);
+            });
+        }
+    });
+
+    emojis.forEach(emoji => {
+        emoji.addEventListener('click', function() {
+            const emojiText = this.getAttribute('data-emoji');
+            console.log('Emoji clicked:', emojiText);
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            input.value = input.value.slice(0, start) + emojiText + input.value.slice(end);
+            input.focus();
+            const newCursorPos = start + emojiText.length;
+            input.setSelectionRange(newCursorPos, newCursorPos);
+            input.dispatchEvent(new Event('input'));
+            if (isAnimating) return;
+            isAnimating = true;
+            emojiPanel.classList.remove('show');
+            setTimeout(() => {
+                if (!emojiPanel.classList.contains('show')) {
+                    emojiPanel.style.display = 'none';
+                    isAnimating = false;
+                }
+            }, 300);
+        });
     });
 }
 
-// 加载表情
-function loadEmojis() {
-    const emojiContent = document.getElementById('emoji-content');
-    const emojis = ['😊', '😂', '🤣', '❤️', '😍', '😒', '👍', '😁', '😘', '🙄', 
-                    '😭', '😅', '😩', '😡', '🥰', '😎', '🤔', '🤗', '😴', '😷'];
-    
-    emojiContent.innerHTML = emojis.map(emoji => `
-        <div class="emoji-item" onclick="insertEmoji('${emoji}')">${emoji}</div>
-    `).join('');
+// 切换标签页
+function showTab(tabId) {
+    const tabs = document.querySelectorAll('.tab-content');
+    const buttons = document.querySelectorAll('.tab-button');
+
+    // 隐藏所有标签页内容
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+        tab.style.display = 'none';
+    });
+
+    // 移除所有按钮的激活状态
+    buttons.forEach(button => {
+        button.classList.remove('active');
+    });
+
+    // 显示选中的标签页
+    const selectedTab = document.getElementById(tabId);
+    selectedTab.classList.add('active');
+    selectedTab.style.display = 'flex';
+
+    // 激活对应的按钮
+    document.querySelector(`[onclick*="${tabId}"]`).classList.add('active');
+
+    // 如果是贴纸标签页，加载贴纸
+    if (tabId === 'stickers-tab') {
+        loadStickers();
+    }
 }
 
 // 加载贴纸
-function loadStickers() {
-    const stickersContent = document.getElementById('stickers-content');
-    
-    fetch('/get_stickers')
-        .then(response => response.json())
-        .then(stickers => {
-            stickersContent.innerHTML = stickers.map(sticker => `
-                <div class="sticker-item" onclick="insertSticker('${sticker.url}')">
-                    <img src="${sticker.url}" alt="sticker">
-                </div>
-            `).join('');
-        });
-}
+async function loadStickers() {
+    const container = document.querySelector('.sticker-container');
+    if (!container) return;
 
-// 插入表情
-function insertEmoji(emoji) {
-    const input = document.getElementById('message-input');
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
-    input.focus();
-    input.selectionStart = input.selectionEnd = start + emoji.length;
+    try {
+        const response = await fetch('/get_sticker_packs');
+        const packs = await response.json();
+
+        container.innerHTML = '';
+
+        // 处理单个贴纸（没有包名的贴纸）
+        const singleStickers = [];
+
+        packs.forEach(pack => {
+            if (typeof pack === 'string') {
+                singleStickers.push(pack);
+            } else if (pack.stickers) {
+                if (!pack.name) {
+                    singleStickers.push(...pack.stickers);
+                }
+            }
+        });
+
+        // 显示单个贴纸
+        if (singleStickers.length > 0) {
+            const packDiv = document.createElement('div');
+            packDiv.className = 'sticker-pack';
+            packDiv.setAttribute('data-pack-name', '未分组贴纸');
+
+            const header = document.createElement('div');
+            header.className = 'pack-header';
+            header.innerHTML = `<span class="pack-name">未分组贴纸</span>`;
+
+            const grid = document.createElement('div');
+            grid.className = 'sticker-grid';
+
+            singleStickers.forEach(url => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'sticker-wrapper';
+
+                const fileExt = url.split('.').pop().toLowerCase();
+                let element;
+
+                if (fileExt === 'webm') {
+                    element = document.createElement('video');
+                    element.src = url;
+                    element.autoplay = true;
+                    element.loop = true;
+                    element.muted = true;
+                    element.playsInline = true;
+                    element.className = 'sticker-image webm-sticker';
+                } else {
+                    element = document.createElement('img');
+                    element.src = url;
+                    element.className = 'sticker-image';
+                }
+
+                element.onclick = () => insertSticker(url);
+
+                // 添加删除按钮 - 所有用户都可以删除
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'sticker-delete-btn';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm('确定要删除这个贴纸吗？')) {
+                        deleteSticker(url);
+                    }
+                };
+                wrapper.appendChild(deleteBtn);
+
+                wrapper.appendChild(element);
+                grid.appendChild(wrapper);
+            });
+
+            packDiv.appendChild(header);
+            packDiv.appendChild(grid);
+            container.appendChild(packDiv);
+        }
+
+        // 处理贴纸包
+        packs.filter(p => p.name && p.name !== '').forEach(pack => {
+            const packDiv = document.createElement('div');
+            packDiv.className = 'sticker-pack';
+            packDiv.setAttribute('data-pack-name', pack.name);
+
+            const header = document.createElement('div');
+            header.className = 'pack-header';
+            header.innerHTML = `
+                <span class="pack-name">${pack.name}</span>
+                <button class="pack-delete" onclick="deleteStickerPack('${pack.id}')" title="删除贴纸包">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                </button>
+            `;
+
+            const grid = document.createElement('div');
+            grid.className = 'sticker-grid';
+
+            pack.stickers.forEach(url => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'sticker-wrapper';
+
+                const fileExt = url.split('.').pop().toLowerCase();
+                let element;
+
+                if (fileExt === 'webm') {
+                    element = document.createElement('video');
+                    element.src = url;
+                    element.autoplay = true;
+                    element.loop = true;
+                    element.muted = true;
+                    element.playsInline = true;
+                    element.className = 'sticker-image webm-sticker';
+                } else {
+                    element = document.createElement('img');
+                    element.src = url;
+                    element.className = 'sticker-image';
+                }
+
+                element.onclick = () => insertSticker(url);
+
+                // 添加删除按钮 - 所有用户都可以删���
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'sticker-delete-btn';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm('确定要删除这个贴纸吗？')) {
+                        deleteSticker(url);
+                    }
+                };
+                wrapper.appendChild(deleteBtn);
+
+                wrapper.appendChild(element);
+                grid.appendChild(wrapper);
+            });
+
+            packDiv.appendChild(header);
+            packDiv.appendChild(grid);
+            container.appendChild(packDiv);
+
+            const videos = packDiv.querySelectorAll('video');
+            videos.forEach(video => {
+                video.play().catch(e => console.log('视频自动播放失败:', e));
+            });
+        });
+    } catch (error) {
+        console.error('加载贴纸失败:', error);
+        container.innerHTML = '<div class="error-message">加载贴纸失败</div>';
+    }
 }
 
 // 插入贴纸
 function insertSticker(url) {
     socket.emit('message', `[sticker]${url}[/sticker]`);
-    emojiPanel.style.display = 'none';
-}
 
-// 初始化侧边栏
-function initSidebar() {
-    document.addEventListener('click', (e) => {
-        if (sidebar.classList.contains('active') && 
-            !sidebar.contains(e.target) && 
-            !e.target.closest('.menu-btn')) {
-            sidebar.classList.remove('active');
-        }
-    });
-}
-
-// 切换侧边栏
-function toggleSidebar() {
-    sidebar.classList.toggle('active');
-}
-
-// 添加消息到聊天区域
-function appendMessage(data) {
-    const messages = document.getElementById('messages');
-    const isOwn = data.username === window.CHAT_CONFIG.currentUser.username;
-    
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${isOwn ? 'message-own' : ''}`;
-    messageDiv.setAttribute('data-message-id', data.id);
-    
-    // 处理贴纸消息
-    if (data.text && data.text.startsWith('[sticker]') && data.text.endsWith('[/sticker]')) {
-        const stickerUrl = data.text.replace('[sticker]', '').replace('[/sticker]', '');
-        messageDiv.innerHTML = `
-            <div class="message-content sticker-message">
-                <img src="${stickerUrl}" alt="sticker" class="sticker-image">
-            </div>
-        `;
-    } else {
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                ${data.text}
-            </div>
-        `;
-    }
-    
-    // 为自己发送的消息添加长按事件
-    if (isOwn) {
-        let pressTimer;
-        let touchStartX;
-        let touchStartY;
-        
-        messageDiv.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-            pressTimer = setTimeout(() => {
-                showMessageActions(data.id, e.touches[0].clientX, e.touches[0].clientY);
-            }, 500);
-        });
-
-        messageDiv.addEventListener('touchmove', (e) => {
-            if (Math.abs(e.touches[0].clientX - touchStartX) > 10 ||
-                Math.abs(e.touches[0].clientY - touchStartY) > 10) {
-                clearTimeout(pressTimer);
+    // 关闭表情面板和贴纸面板
+    const emojiPanel = document.getElementById('emoji-panel');
+    const stickerPanel = document.getElementById('sticker-panel');
+    emojiPanel.classList.remove('show');
+    stickerPanel.classList.remove('show');
+    setTimeout(() => {
+        emojiPanel.style.display = 'none';
+        stickerPanel.style.display = 'none';
+        // 重置选项卡状态为表情
+        const tabs = document.querySelectorAll('.panel-tab');
+        tabs.forEach(tab => {
+            if (tab.textContent.includes('表情')) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
             }
         });
-
-        messageDiv.addEventListener('touchend', () => {
-            clearTimeout(pressTimer);
-        });
-    }
-    
-    messages.appendChild(messageDiv);
-    messages.scrollTop = messages.scrollHeight;
+        // 重置面板显示状态
+        emojiPanel.querySelector('.emoji-grid').style.display = 'grid';
+        stickerPanel.style.display = 'none';
+    }, 300);
 }
 
-// 更新输入状态
-function updateTypingStatus(data) {
-    const statusDiv = document.getElementById('typing-status');
-    if (data.status === 'typing') {
-        statusDiv.textContent = `${data.username} 正在输入...`;
-        statusDiv.style.display = 'block';
-    } else {
-        statusDiv.style.display = 'none';
-    }
-}
-
-// 文件上传处理
-function initFileUpload() {
-    const fileInput = document.getElementById('file-input');
-    
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+// 上传贴纸包
+function uploadStickerPack(input) {
+    if (input.files && input.files[0]) {
+        const packName = prompt('请输入贴纸包名称：');
+        if (!packName) {
+            input.value = '';
+            return;
+        }
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('sticker_pack', input.files[0]);
+        formData.append('pack_name', packName);
 
-        // 显示上传进度
-        const progressBar = document.createElement('div');
-        progressBar.className = 'upload-progress';
-        progressBar.innerHTML = `
-            <div class="progress-bar">
-                <div class="progress-fill"></div>
-            </div>
-            <div class="progress-text">0%</div>
-        `;
-        document.querySelector('.chat-footer').insertBefore(progressBar, null);
-
-        // 发送文件
-        const xhr = new XMLHttpRequest();
-        xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                const percent = Math.round((e.loaded * 100) / e.total);
-                progressBar.querySelector('.progress-fill').style.width = percent + '%';
-                progressBar.querySelector('.progress-text').textContent = percent + '%';
+        fetch('/upload_sticker_pack', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                loadStickers();
+            } else {
+                alert(result.error || '上传失败');
             }
-        };
-
-        xhr.onload = function() {
-            progressBar.remove();
-            if (xhr.status === 200) {
-                const response = JSON.parse(xhr.responseText);
-                if (response.success) {
-                    socket.emit('message', `[file]${response.file_url}[/file]`);
-                }
-            }
-        };
-
-        xhr.onerror = function() {
-            progressBar.remove();
+            input.value = '';
+        })
+        .catch(error => {
+            console.error('上传贴纸包失败:', error);
             alert('上传失败，请重试');
-        };
+            input.value = '';
+        });
+    }
+}
 
-        xhr.open('POST', '/upload', true);
-        xhr.send(formData);
+// 上传单个贴纸
+function uploadSticker(input) {
+    if (input.files && input.files[0]) {
+        const formData = new FormData();
+        formData.append('sticker', input.files[0]);
+
+        fetch('/upload_sticker', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                loadStickers();
+            } else {
+                alert(result.error || '上传失败');
+            }
+            input.value = '';
+        })
+        .catch(error => {
+            console.error('上传贴纸失败:', error);
+            alert('上传失败，请重试');
+            input.value = '';
+        });
+    }
+}
+
+// 删除贴纸包
+function deleteStickerPack(packId) {
+    if (confirm('确定要删除这个贴纸包吗？这将删除包内所有贴纸。')) {
+        fetch('/delete_sticker_pack', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ pack_id: packId })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                loadStickers();
+            } else {
+                alert(result.error || '删除失败');
+            }
+        })
+        .catch(error => {
+            console.error('删除贴纸包失败:', error);
+            alert('删除失败，请重试');
+        });
+    }
+}
+
+// 删除单个贴纸
+function deleteSticker(url) {
+    fetch('/delete_sticker', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: url })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            loadStickers();
+        } else {
+            alert(result.error || '删除失败');
+        }
+    })
+    .catch(error => {
+        console.error('删除贴纸失败:', error);
+        alert('删除失败，请重试');
     });
 }
-
-// 显示消息操作菜单
-function showMessageActions(messageId, x, y) {
-    // 移除已存在的操作菜单
-    const existingMenu = document.querySelector('.message-actions-menu');
-    if (existingMenu) {
-        existingMenu.remove();
-    }
-
-    const menu = document.createElement('div');
-    menu.className = 'message-actions-menu';
-    menu.innerHTML = `
-        <div class="action-item edit-action">编辑</div>
-        <div class="action-item delete-action">删除</div>
-    `;
-    
-    // 定位菜单
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
-    
-    // 添加事件处理
-    menu.querySelector('.edit-action').onclick = () => {
-        editMessage(messageId);
-        menu.remove();
-    };
-    
-    menu.querySelector('.delete-action').onclick = () => {
-        if (confirm('确定要删除这条消息吗？')) {
-            deleteMessage(messageId);
-            menu.remove();
-        }
-    };
-    
-    document.body.appendChild(menu);
-    
-    // 点击其他地方关闭菜单
-    setTimeout(() => {
-        document.addEventListener('click', function closeMenu(e) {
-            if (!menu.contains(e.target)) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
-            }
-        });
-    }, 0);
-}
-
-// 编辑消息
-function editMessage(messageId) {
-    const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
-    if (!messageDiv) return;
-    
-    const contentDiv = messageDiv.querySelector('.message-content');
-    const currentText = contentDiv.textContent;
-    
-    // 创建编辑框
-    const editContainer = document.createElement('div');
-    editContainer.className = 'edit-container';
-    editContainer.innerHTML = `
-        <input type="text" class="edit-input" value="${currentText}">
-        <div class="edit-actions">
-            <button class="save-edit">保存</button>
-            <button class="cancel-edit">取消</button>
-        </div>
-    `;
-    
-    contentDiv.replaceWith(editContainer);
-    
-    const input = editContainer.querySelector('.edit-input');
-    input.focus();
-    
-    // 保存编辑
-    editContainer.querySelector('.save-edit').onclick = () => {
-        const newText = input.value.trim();
-        if (newText && newText !== currentText) {
-            socket.emit('edit_message', {
-                id: messageId,
-                text: newText
-            });
-        }
-        editContainer.replaceWith(contentDiv);
-    };
-    
-    // 取消编辑
-    editContainer.querySelector('.cancel-edit').onclick = () => {
-        editContainer.replaceWith(contentDiv);
-    };
-}
-
-// 删除消息
-function deleteMessage(messageId) {
-    socket.emit('delete_message', { id: messageId });
-} 

@@ -1,0 +1,653 @@
+/* 基础消息样式 - 仅用于文本消息 */
+.message-content {
+    padding: 8px 12px;
+    background: #fff;
+    border-radius: 12px;
+    max-width: 70%;
+}
+
+/* 包含贴纸的消息内容样式 */
+.message-content:has(.message-sticker) {
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* 图片消息样式 */
+.image-message {
+    padding: 0 !important;
+    background: none !important;
+    border-radius: 0 !important;
+    font-size: 0;
+    line-height: 0;
+}
+
+/* 图片样式 */
+.message-image {
+    max-width: 200px;
+    max-height: 300px;
+    border-radius: 8px;
+    object-fit: cover;
+    vertical-align: top;
+}
+
+/* 消息对齐方式 */
+.message {
+    margin: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.message-own {
+    align-items: flex-end;
+}
+
+/* 自己发送的文本消息样式 */
+.message-own .message-content:not(:has(.message-image)):not(:has(.message-video)):not(:has(.message-sticker)) {
+    background: #95ec69;
+}
+
+/* 视频容器样式 */
+.message-video {
+    width: auto;
+    max-width: 70%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* 视频样式 */
+.message-video video {
+    width: 100%;
+    max-width: 240px;
+    max-height: 400px;
+    display: block;
+}
+
+/* 贴纸样式 */
+.message-sticker {
+    width: auto;
+    max-width: 120px;
+    height: auto;
+    vertical-align: top;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 时间和用户名样式 */
+.message-meta {
+    font-size: 12px;
+    color: #999;
+    margin: 2px 4px;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -250px;
+    width: 250px;
+    height: 100vh;
+    background-color: #f8f9fa;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+    transition: left 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    padding: 60px 0 20px 0;
+    gap: 15px;
+    z-index: 999;
+    overflow-y: auto;
+}
+
+.sidebar-item {
+    text-decoration: none;
+    color: #333;
+    font-size: 16px;
+    padding: 10px 20px;
+    border-radius: 0;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 10px;
+}
+
+.sidebar-item:hover {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* 管理图标 */
+.sidebar-item:nth-child(1) svg {
+    fill: #FF6B6B;
+}
+
+/* 设置图标 */
+.sidebar-item:nth-child(2) svg {
+    fill: #4ECDC4;
+}
+
+/* 退出图标 */
+.sidebar-item:nth-child(3) svg {
+    fill: #45B7D1;
+}
+
+.sidebar.open {
+    left: 0;
+}
+
+/* 调整聊天容器以适应侧边栏 */
+.chat-container {
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+/* 当侧边栏打开时，移动聊天容器 */
+.sidebar.open ~ .chat-container {
+    transform: translateX(250px);
+}
+
+/* 添加遮罩层 */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 998;
+}
+
+.sidebar.open ~ .sidebar-overlay {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 菜单图标样式 */
+.menu-icon path {
+    stroke: white;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+/* 导航图标容器 */
+.nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+}
+
+/* 点击反馈 */
+.nav-icon:active {
+    opacity: 0.7;
+}
+
+/* 侧边栏图标样式 */
+.sidebar-item svg {
+    width: 24px;
+    height: 24px;
+    fill: #666;
+}
+
+.sidebar-item span {
+    flex: 1;
+}
+
+/* 侧边栏项目悬停效果 */
+.sidebar-item:hover svg {
+    fill: #333;
+}
+
+/* 开发人员列表样式 */
+.dev-list {
+    margin-top: auto;
+    padding: 15px 0;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    margin-top: 10px;
+    background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.02));
+}
+
+.dev-title {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 8px;
+    padding: 0 20px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.dev-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 20px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+    margin: 0 10px;
+    border-radius: 8px;
+}
+
+.dev-link:hover {
+    background-color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.dev-link svg {
+    width: 20px;
+    height: 20px;
+    fill: #24292e;
+    opacity: 0.8;
+}
+
+.dev-link:hover svg {
+    fill: #2188ff;
+    opacity: 1;
+}
+
+.sidebar-item:hover svg {
+    opacity: 0.8;
+    transform: scale(1.1);
+    transition: all 0.2s ease;
+}
+
+/* 添加滚动条样式 */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0,0,0,0.3);
+}
+
+/* 侧边栏项目文字样式 */
+.sidebar-item span,
+.dev-link span {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+/* 添加动画效果 */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.sidebar.open .sidebar-item,
+.sidebar.open .dev-link {
+    animation: slideIn 0.3s ease forwards;
+    animation-delay: calc(var(--item-index, 0) * 0.05s);
+}
+
+/* 确保侧边栏内容完全显示 */
+.sidebar > *:first-child {
+    margin-top: 0;
+}
+
+.sidebar > *:last-child {
+    margin-bottom: 0;
+}
+
+/* 限制内容区域高度 */
+.sidebar-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 移动端表情面板样式 */
+.emoji-panel, .sticker-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50vh;
+    background: white;
+    border-top: 1px solid var(--border-color);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    border-radius: 16px 16px 0 0;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.emoji-panel.show, .sticker-panel.show {
+    transform: translateY(0);
+}
+
+/* 调整输入区域样式 */
+.message-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    border-top: 1px solid var(--border-color);
+    padding: 10px;
+    height: 60px;
+    box-sizing: border-box;
+}
+
+/* 当表情面板打开时，移动输入框到表情面板上方 */
+.emoji-panel.show ~ .message-input,
+.sticker-panel.show ~ .message-input {
+    transform: translateY(-50vh);
+}
+
+.emoji-tabs {
+    display: flex;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    background: #f8f9fa;
+    border-radius: 16px 16px 0 0;
+    position: relative;
+    z-index: 1;
+    height: 50px;
+    box-sizing: border-box;
+}
+
+/* 添加拖动条示意 */
+.emoji-panel::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background-color: #ddd;
+    border-radius: 2px;
+}
+
+.tab-button {
+    padding: 8px;
+    border: none;
+    background: none;
+    color: #666;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex: 1;
+    text-align: center;
+    position: relative;
+    line-height: 34px;
+}
+
+.tab-button.active {
+    background: rgba(0, 206, 209, 0.1);
+    color: #00CED1;
+}
+
+.tab-contents {
+    flex: 1;
+    overflow: hidden;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    padding: 0;
+    margin: 0;
+    position: relative;
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+}
+
+.tab-content {
+    display: none;
+    height: calc(50vh - 50px);
+    overflow-y: auto;
+    width: 100vw;
+    flex: 1;
+    background: white;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+    margin: 0;
+    overflow-x: hidden;
+    position: absolute;
+    left: 0;
+    top: 50px;
+    bottom: 0;
+    box-sizing: border-box;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+}
+
+/* 表情栏样式 */
+#emoji-tab {
+    width: 100vw;
+    box-sizing: border-box;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: calc(50vh - 50px);
+    overflow-y: auto;
+    background: white;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 0 8px;
+    background: white;
+    width: 100vw;
+    box-sizing: border-box;
+    margin: 0;
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    top: 0;
+    height: calc((100vw - 60px) / 4);
+    aspect-ratio: 1;
+}
+
+.emoji {
+    font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 8px;
+    transition: all 0.2s;
+    user-select: none;
+    touch-action: manipulation;
+    cursor: pointer;
+    width: 100%;
+    height: calc((100vw - 60px) / 4);
+    aspect-ratio: 1;
+}
+
+.emoji:active {
+    background-color: rgba(0, 206, 209, 0.1);
+    transform: scale(0.95);
+}
+
+/* 贴纸面板样式 */
+#sticker-tab {
+    width: 100vw;
+    box-sizing: border-box;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: calc(50vh - 50px);
+    overflow-y: auto;
+    background: white;
+}
+
+/* 贴纸包上传区域 */
+.sticker-packs {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    background: white;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* 贴纸包容器 */
+.sticker-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 贴纸包 */
+.sticker-pack {
+    max-width: 65%;
+    margin: 8px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 贴纸包标题 */
+.pack-header {
+    padding: 4px 12px;
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* 贴纸网格 */
+.sticker-grid {
+    padding: 6px 8px 8px;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+/* 贴纸包装器 */
+.sticker-wrapper {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%;
+}
+
+/* 贴纸图片 */
+.sticker-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+/* 贴纸包上传按钮 */
+.pack-upload-box {
+    width: calc(50% - 4px);
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #ddd;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.8);
+}
+
+.pack-upload-box:active {
+    background: rgba(0, 206, 209, 0.1);
+    border-color: #00CED1;
+}
+
+.upload-icon-large {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+}
+
+.upload-icon-large svg {
+    width: 100%;
+    height: 100%;
+    fill: #666;
+}
+
+/* webm 贴纸样式 */
+.webm-sticker {
+    background: transparent;
+}
+
+/* 错误消息样式 */
+.error-message {
+    color: #ff4d4f;
+    text-align: center;
+    padding: 16px;
+}
+
+/* 面板标签栏样式 */
+.panel-tabs {
+    display: flex;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    background: #f8f9fa;
+    border-radius: 16px 16px 0 0;
+    margin-bottom: 0;
+}
+
+.panel-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: #666;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.panel-tab.active {
+    background: rgba(0, 206, 209, 0.1);
+    color: #00CED1;
+}
