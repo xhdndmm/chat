@@ -20,7 +20,12 @@
                 如需注册新账号或重置密码，请联系系统管理员。
             </p>
             <div class="contact-info">
-                <p>你也可以自己提交申请</p>
+                <p>联系方式：</p>
+                <ul>
+                    <li>邮箱：</li>
+                    <li>微信：</li>
+                </ul>
+                <form action="{{ url_for('main.register_request') }}" method="post">
                     <div class="form-group">
                         <label for="username">用户名</label>
                         <input type="text" id="username" name="username" required>
@@ -34,19 +39,11 @@
                         <textarea id="info" name="info" required></textarea>
                     </div>
                     <button type="submit" class="back-btn">提交注册申请</button>
-                    <!--
-                    <br>
-                    <p>
-                        使用本项目必须遵守以下协议
-                        1.禁止传播非法信息，如恐怖、暴力、涉黄等。
-                        2.禁止用任何手段破解本项目，如破解管理员密码、数据库密码、项目源代码。
-                        3.禁止用于任何违法事情，如聚众赌博等。
-                        4.使用该项目造成的任何损失和由用户承担。
-                        5.使用该项目造成的任何责任和由用户承担。
-                    </p>
-                    -->
+                </form>
             </div>
             <a href="{{ url_for('main.login') }}" class="back-btn">返回登录</a>
+            <a href="{{ url_for('main.agreement') }}" class="back-btn">用户协议</a>
+            <a href="{{ url_for('main.register_request') }}" class="back-btn">提交注册申请</a>
         </div>
     </div>
 </body>
