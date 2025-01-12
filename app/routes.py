@@ -14,6 +14,7 @@ from config.log_config import logger
 from functools import wraps
 import zipfile
 import io
+import psutil
 
 
 bp = Blueprint('main', __name__)
@@ -698,3 +699,15 @@ def upload_emoji():
         return jsonify({'success': True, 'url': url_for('static', filename=f'emojis/{filename}')})
 
     return jsonify({'error': '不支持的文件类型'}), 400
+
+#服务器状态
+@bp.route('/server_status')
+def server_status():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_info = psutil.virtual_memory()
+    memory_usage = memory_info.percent
+
+    return jsonify({
+        'cpu_usage': cpu_usage,
+        'memory_usage': memory_usage
+    })
