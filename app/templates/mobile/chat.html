@@ -105,11 +105,11 @@
         window.CHAT_CONFIG = {
             currentUser: {
                 username: "{{ current_user.username }}",
-                isAdmin: {{ current_user.is_admin|tojson|safe }},
+                isAdmin: "{{ current_user.is_admin|tojson|safe }}",
                 avatarUrl: "{{ current_user.get_avatar_url() }}"
             }
         };
     </script>
     <script src="{{ url_for('static', filename='js/mobile/chat.js') }}"></script>
 </body>
-</html> 
+</html>

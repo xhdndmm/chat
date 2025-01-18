@@ -3,7 +3,7 @@ const socket = io();
 
 // 获取 DOM 元素
 const form = document.getElementById('message-form');
-const input = document.getElementById('input');
+const input = document.getElementById('message-input');
 const messages = document.getElementById('messages');
 const fileInput = document.getElementById('file-input');
 const emojiBtn = document.querySelector('.emoji-btn');
@@ -570,7 +570,7 @@ async function loadStickers() {
 
                 element.onclick = () => insertSticker(url);
 
-                // 添加删除按钮 - 所有用户都可以删���
+                // 添加删除按钮 - 所有用户都可以删除
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'sticker-delete-btn';
                 deleteBtn.innerHTML = '×';
