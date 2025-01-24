@@ -1,4 +1,6 @@
-# 项目名称
+# 聊天室
+
+[Telegram开发群](https://t.me/githubxhdndmmchat)
 
 ## 简介
 
