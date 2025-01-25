@@ -150,7 +150,8 @@ def admin():
                 flash('用户已存在')
 
     users = list(current_app.db.users.find())
-    return render_template('admin.html', users=users)
+    register_requests = list(current_app.db.register_requests.find())
+    return render_template('admin.html', users=users, register_requests=register_requests)
 
 
 @bp.route('/admin/delete/<username>', methods=['POST'])
@@ -173,6 +174,52 @@ def reset_password(username):
         {'$set': {'password': '123456'}}
     )
     return jsonify({'success': True, 'message': f'用户 {username} 的密码已重置为: 123456'})
+
+
+@bp.route('/admin/approve_request/<username>', methods=['POST'])
+@login_required
+@admin_required
+def approve_request(username):
+    request_data = current_app.db.register_requests.find_one({'username': username})
+    if request_data:
+        current_app.db.users.insert_one({
+            'username': request_data['username'],
+            'password': request_data['password'],
+            'is_admin': False,
+            'created_at': datetime.now(),
+            'status': '正常'
+        })
+        current_app.db.register_requests.delete_one({'username': username})
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'message': '注册申请不存在'})
+
+@bp.route('/admin/reject_request/<username>', methods=['POST'])
+@login_required
+@admin_required
+def reject_request(username):
+    current_app.db.register_requests.delete_one({'username': username})
+    return jsonify({'success': True})
+
+
+@bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        info = request.form['info']
+
+        if current_app.db.register_requests.find_one({'username': username}):
+            flash('注册申请已存在')
+        else:
+            current_app.db.register_requests.insert_one({
+                'username': username,
+                'password': password,
+                'info': info,
+                'created_at': datetime.now()
+            })
+            flash('注册申请已提交')
+
+    return render_template('contact_admin.html')
 
 
 @socketio.on('connect')

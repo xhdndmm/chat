@@ -25,6 +25,7 @@
                     <li>邮箱：</li>
                     <li>微信：</li>
                 </ul>
+                <form method="post" action="{{ url_for('main.register') }}">
                     <div class="form-group">
                         <label for="username">用户名</label>
                         <input type="text" id="username" name="username" required>
