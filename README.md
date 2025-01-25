@@ -93,10 +93,15 @@
     ```bash
     docker compose up -d
     ```
+    首次使用或更新版本时：
+   管理员运行：
+    ```bash
+    docker compose up -d --build
+    ```
 
     这将构建 Docker 镜像并在端口 8080 上运行容器。
 
-9. **访问应用程序**
+8. **访问应用程序**
 
     打开浏览器并访问 `http://localhost:8080` 以查看应用程序。
 
