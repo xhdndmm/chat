@@ -13,8 +13,6 @@
 在开始之前，请确保你的系统上安装了以下软件：
 
 -   [Docker](https://www.docker.com/get-started) - 用于容器化应用程序
--   [Python 3.11](https://www.python.org/downloads/) - 用于运行 Flask 应用程序
--   [pip](https://pip.pypa.io/en/stable/installation/) - Python 包管理器
 
 ### 步骤
 
