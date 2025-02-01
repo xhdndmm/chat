@@ -1,6 +1,8 @@
 # 聊天室
+中文版|[English](README_EN.md)
 
-[Telegram开发群](https://t.me/githubxhdndmmchat)
+[聊天室开发群](https://t.me/githubxhdndmmchat)
+[问题反馈](https://t.me/xhdndmmchat)
 
 ## 简介
 
