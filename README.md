@@ -2,7 +2,6 @@
 中文版|[English](README_EN.md)
 
 [聊天室开发群](https://t.me/githubxhdndmmchat)
-[问题反馈](https://t.me/xhdndmmchat)
 
 ## 简介
 

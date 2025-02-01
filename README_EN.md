@@ -1,7 +1,6 @@
 # Chat Room
 
 [Telegram Development Group](https://t.me/githubxhdndmmchat)
-[Bug Report](https://t.me/xhdndmmchat)
 
 ## Introduction
 
