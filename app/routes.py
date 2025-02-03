@@ -55,6 +55,7 @@ ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # 确保头像目录存在
 os.makedirs(AVATAR_FOLDER, exist_ok=True)
 
+
 def allowed_avatar(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
