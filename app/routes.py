@@ -489,6 +489,9 @@ def contact_admin():
 STICKER_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'stickers')
 os.makedirs(STICKER_FOLDER, exist_ok=True)
 
+EMOJI_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'emojis')
+os.makedirs(EMOJI_FOLDER, exist_ok=True)
+
 @bp.route('/upload_sticker', methods=['POST'])
 @login_required
 def upload_sticker():
