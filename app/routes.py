@@ -252,10 +252,10 @@ def handle_connect():
 def handle_message(data):
     if not current_user.is_authenticated:
         return
-    
+
     try:
         logger.info(f'处理来自 {current_user.username} 的消息: {data}')
-        
+
         # 获取用户数据
         user_data = current_app.db.users.find_one({'username': current_user.username})
         avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
@@ -770,7 +770,7 @@ def server_status():
     cpu_usage = psutil.cpu_percent(interval=1)
     memory_info = psutil.virtual_memory()
     memory_usage = memory_info.percent
-    
+
     # 获取硬盘使用情况
     disk_info = psutil.disk_usage('/')
     disk_usage = disk_info.percent
@@ -796,7 +796,7 @@ def handle_group_message(data):
     """
     group_id = data['group_id']
     message = data['message']
-    
+
     # 验证用户是否在群组中
     group = current_app.db.groups.find_one({
         'id': group_id,
@@ -804,7 +804,7 @@ def handle_group_message(data):
     })
     if not group:
         return
-    
+
     # 创建消息数据，添加已读状态跟踪
     message_data = {
         'group_id': group_id,
@@ -815,11 +815,11 @@ def handle_group_message(data):
         'read_by': [current_user.username],  # 发送者默认已读
         'unread_by': [member for member in group['members'] if member != current_user.username]  # 其他成员未读
     }
-    
+
     # 保存消息到数据库
     message_id = current_app.db.group_messages.insert_one(message_data).inserted_id
     message_data['id'] = str(message_id)
-    
+
     # 广播消息给群组所有在线成员
     emit('group_message', {
         'id': str(message_id),
@@ -839,7 +839,7 @@ def mark_group_message_read(message_id):
     message = current_app.db.group_messages.find_one({'_id': ObjectId(message_id)})
     if not message:
         return jsonify({'error': '消息不存在'}), 404
-    
+
     # 验证用户是否在群组中
     group = current_app.db.groups.find_one({
         'id': message['group_id'],
@@ -847,7 +847,7 @@ def mark_group_message_read(message_id):
     })
     if not group:
         return jsonify({'error': '无权访问该消息'}), 403
-    
+
     # 更新消息的已读状态
     current_app.db.group_messages.update_one(
         {'_id': ObjectId(message_id)},
@@ -856,17 +856,17 @@ def mark_group_message_read(message_id):
             '$pull': {'unread_by': current_user.username}
         }
     )
-    
+
     # 获取更新后的消息数据
     updated_message = current_app.db.group_messages.find_one({'_id': ObjectId(message_id)})
-    
+
     # 广播消息已读状态更新
     socketio.emit('message_read_status_updated', {
         'message_id': message_id,
         'read_by': updated_message['read_by'],
         'unread_by': updated_message['unread_by']
     }, room=f"group_{message['group_id']}")
-    
+
     return jsonify({'success': True})
 
 # WebSocket事件：发送私聊消息
@@ -875,7 +875,7 @@ def handle_private_message(data):
     """处理私聊消息的WebSocket事件"""
     chat_id = data['chat_id']
     message = data['message']
-    
+
     # 验证用户是否是私聊参与者
     chat = current_app.db.private_chats.find_one({
         '_id': ObjectId(chat_id),
@@ -884,13 +884,13 @@ def handle_private_message(data):
             {'user2': current_user.username}
         ]
     })
-    
+
     if not chat:
         return
-    
+
     # 获取对方用户名
     other_user = chat['user2'] if chat['user1'] == current_user.username else chat['user1']
-    
+
     # 创建消息数据，添加已读状态
     message_data = {
         'chat_id': chat_id,
@@ -901,10 +901,10 @@ def handle_private_message(data):
         'read_by': [current_user.username],  # 发送者默认已读
         'unread_by': [other_user]  # 接收者未读
     }
-    
+
     # 保存消息到数据库
     message_id = current_app.db.private_messages.insert_one(message_data).inserted_id
-    
+
     # 更新私聊的最后一条消息
     current_app.db.private_chats.update_one(
         {'_id': ObjectId(chat_id)},
@@ -919,7 +919,7 @@ def handle_private_message(data):
             }
         }
     )
-    
+
     # 发送消息给私聊房间的所有用户
     emit('private_message', {
         'id': str(message_id),
@@ -939,7 +939,7 @@ def mark_private_message_read(message_id):
     message = current_app.db.private_messages.find_one({'_id': ObjectId(message_id)})
     if not message:
         return jsonify({'error': '消息不存在'}), 404
-    
+
     # 验证用户是否是私聊参与者
     chat = current_app.db.private_chats.find_one({
         '_id': ObjectId(message['chat_id']),
@@ -950,7 +950,7 @@ def mark_private_message_read(message_id):
     })
     if not chat:
         return jsonify({'error': '无权访问该消息'}), 403
-    
+
     # 更新消息的已读状态
     current_app.db.private_messages.update_one(
         {'_id': ObjectId(message_id)},
@@ -959,7 +959,7 @@ def mark_private_message_read(message_id):
             '$pull': {'unread_by': current_user.username}
         }
     )
-    
+
     # 更新私聊的未读消息计数
     unread_count = current_app.db.private_messages.count_documents({
         'chat_id': message['chat_id'],
@@ -969,28 +969,28 @@ def mark_private_message_read(message_id):
         {'_id': ObjectId(message['chat_id'])},
         {'$set': {'unread_count': unread_count}}
     )
-    
+
     # 获取更新后的消息数据
     updated_message = current_app.db.private_messages.find_one({'_id': ObjectId(message_id)})
-    
+
     # 广播消息已读状态更新
     socketio.emit('message_read_status_updated', {
         'message_id': message_id,
         'read_by': updated_message['read_by'],
         'unread_by': updated_message['unread_by']
     }, room=f"private_{message['chat_id']}")
-    
+
     return jsonify({'success': True})
 
 @socketio.on('mark_message_read')
 def handle_message_read(data):
     if not current_user.is_authenticated:
         return
-    
+
     try:
         message_id = data['message_id']
         logger.info(f'标记消息 {message_id} 为已读 (用户: {current_user.username})')
-        
+
         # 从数据库获取消息
         message = current_app.db.messages.find_one({'_id': ObjectId(message_id)})
         if not message:
@@ -1000,7 +1000,7 @@ def handle_message_read(data):
         # 更新已读未读状态
         read_by = set(message.get('read_by', []))
         unread_by = set(message.get('unread_by', []))
-        
+
         # 将当前用户添加到已读列表
         if current_user.username not in read_by:
             read_by.add(current_user.username)
@@ -1025,7 +1025,7 @@ def handle_message_read(data):
                 'read_by': list(read_by),
                 'unread_by': list(unread_by)
             }, broadcast=True)
-            
+
             logger.info(f'消息 {message_id} 的已读状态已更新')
 
     except Exception as e:
@@ -1035,11 +1035,11 @@ def handle_message_read(data):
 def handle_message_unread(data):
     if not current_user.is_authenticated:
         return
-    
+
     try:
         message_id = data['message_id']
         logger.info(f'标记消息 {message_id} 为未读 (用户: {current_user.username})')
-        
+
         # 从数据库获取消息
         message = current_app.db.messages.find_one({'_id': ObjectId(message_id)})
         if not message:
@@ -1049,7 +1049,7 @@ def handle_message_unread(data):
         # 更新已读未读状态
         read_by = set(message.get('read_by', []))
         unread_by = set(message.get('unread_by', []))
-        
+
         # 将当前用户从已读列表中移除
         if current_user.username in read_by:
             read_by.remove(current_user.username)
@@ -1073,7 +1073,7 @@ def handle_message_unread(data):
                 'read_by': list(read_by),
                 'unread_by': list(unread_by)
             }, broadcast=True)
-            
+
             logger.info(f'消息 {message_id} 的未读状态已更新')
 
     except Exception as e:
