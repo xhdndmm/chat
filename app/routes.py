@@ -266,11 +266,11 @@ def handle_message(data):
 
         # 创建消息数据
         message_data = {
-            'text': data,
+            'text': data['text'],  # 确保从data中获取text字段
             'username': current_user.username,
             'avatar_url': avatar_url,
             'timestamp': datetime.now().strftime('%H:%M'),
-            'type': 'text',
+            'type': data.get('type', 'text'),  # 确保从data中获取type字段
             'read_by': [current_user.username],  # 发送者默认已读
             'unread_by': other_users  # 其他所有用户未读
         }
