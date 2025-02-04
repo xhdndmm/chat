@@ -296,76 +296,46 @@ function appendMessage(msgData) {
         return;
     }
 
-    // 处理消息文本
-    const messageText = typeof msgData.text === "object" ? msgData.text.text : msgData.text || "";
-
     const messageDiv = document.createElement("div");
     const isOwn = msgData.username === window.CHAT_CONFIG.currentUser.username;
     messageDiv.className = `message ${isOwn ? "message-own" : "message-other"}`;
     messageDiv.setAttribute("data-message-id", msgData.id);
 
-    // 添加头像
-    const avatarDiv = document.createElement("div");
-    avatarDiv.className = "message-avatar";
-    const avatarImg = document.createElement("img");
-    avatarImg.src = msgData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msgData.username}`;
-    avatarImg.alt = msgData.username;
-    avatarImg.onclick = () => showUserInfo(msgData.username);
-    avatarDiv.appendChild(avatarImg);
-    messageDiv.appendChild(avatarDiv);
+    // 构建消息 HTML
+    let messageHtml = `
+        <div class="message-avatar">
+            <img src="${msgData.avatar_url}" alt="${msgData.username}" onclick="showUserInfo('${msgData.username}')">
+        </div>
+        <div class="message-container">
+            <div class="message-username">${msgData.username}</div>
+            <div class="message-content-wrapper">
+                <div class="message-content">
+    `;
 
-    // 内容容器
-    const contentContainer = document.createElement("div");
-    contentContainer.className = "message-container";
-
-    // 用户名
-    const usernameDiv = document.createElement("div");
-    usernameDiv.className = "message-username";
-    usernameDiv.textContent = msgData.username;
-    contentContainer.appendChild(usernameDiv);
-
-    const contentWrapper = document.createElement("div");
-    contentWrapper.className = "message-content-wrapper";
-
-    // 消息内容
-    const contentDiv = document.createElement("div");
-    contentDiv.className = "message-content";
-
-    // 根据消息类型显示不同内容
-    if (messageText && messageText.startsWith("[sticker]") && messageText.endsWith("[/sticker]")) {
-        handleStickerMessage(msgData, contentDiv);
-    } else if (msgData.type === "file") {
-        handleFileMessage(msgData, contentDiv);
-    } else if (messageText) {
-        contentDiv.textContent = messageText;
+    // 根据消息类型添加内容
+    if (msgData.type === 'file') {
+        messageHtml += renderFileMessage(msgData);
+    } else if (msgData.text && msgData.text.startsWith('[sticker]') && msgData.text.endsWith('[/sticker]')) {
+        const stickerUrl = msgData.text.replace('[sticker]', '').replace('[/sticker]', '');
+        messageHtml += renderStickerMessage(stickerUrl);
+    } else {
+        messageHtml += `<div class="message-text">${msgData.text}</div>`;
     }
 
-    contentWrapper.appendChild(contentDiv);
+    // 添加消息时间和状态
+    messageHtml += `
+                </div>
+                <div class="message-info">
+                    <span class="message-time">${msgData.timestamp}</span>
+                    <div class="message-status"></div>
+                </div>
+            </div>
+        </div>
+    `;
 
-    // 添加消息信息（时间等）
-    const infoDiv = document.createElement("div");
-    infoDiv.className = "message-info";
+    messageDiv.innerHTML = messageHtml;
 
-    // 添加时间
-    const timeSpan = document.createElement("span");
-    timeSpan.className = "message-time";
-    timeSpan.textContent = msgData.timestamp || new Date().toLocaleTimeString("zh-CN", {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-    infoDiv.appendChild(timeSpan);
-
-    // 添加已读未读状态
-    const statusDiv = document.createElement("div");
-    statusDiv.className = "message-status";
-    updateMessageReadStatus(msgData.id, msgData.read_by || [], msgData.unread_by || []);
-    infoDiv.appendChild(statusDiv);
-
-    contentWrapper.appendChild(infoDiv);
-    contentContainer.appendChild(contentWrapper);
-    messageDiv.appendChild(contentContainer);
-
-    // 为消息添加右键菜单事件（仅限自己的消息）
+    // 添加右键菜单事件
     if (isOwn) {
         messageDiv.addEventListener("contextmenu", (e) => {
             e.preventDefault();
@@ -374,9 +344,13 @@ function appendMessage(msgData) {
         });
     }
 
+    // 添加到消息列表
     const messages = document.getElementById("messages");
     messages.appendChild(messageDiv);
     messages.scrollTop = messages.scrollHeight;
+
+    // 更新消息状态
+    updateMessageReadStatus(msgData.id, msgData.read_by || [], msgData.unread_by || []);
 }
 
 // 处理贴纸消息

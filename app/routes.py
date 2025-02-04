@@ -234,34 +234,30 @@ def handle_connect():
         logger.info(f'获取到 {len(messages)} 条历史消息')
         
         for message in messages:
-            # 确保消息有 _id
-            message['id'] = str(message.get('_id', ''))
-            
-            # 如果消息是字典格式
-            if isinstance(message.get('message'), dict):
-                msg_data = message['message']
-                # 如果消息没有头像URL，尝试从用户数据获取
-                if 'avatar_url' not in msg_data:
-                    user_data = current_app.db.users.find_one({'username': msg_data['username']})
-                    if user_data and 'avatar_url' in user_data:
-                        msg_data['avatar_url'] = user_data['avatar_url']
-                emit('message', msg_data)
-            else:
-                # 处理普通文本消息
-                user_data = current_app.db.users.find_one({'username': message.get('username', current_user.username)})
-                avatar_url = user_data.get('avatar_url') if user_data else None
-                
-                msg_data = {
-                    'id': message['id'],
-                    'text': message.get('text', ''),
-                    'username': message.get('username', current_user.username),
-                    'avatar_url': avatar_url or f"https://api.dicebear.com/7.x/avataaars/svg?seed={message.get('username', current_user.username)}",
-                    'timestamp': message.get('timestamp', datetime.now().strftime('%H:%M')),
-                    'type': message.get('type', 'text'),
-                    'read_by': message.get('read_by', []),
-                    'unread_by': message.get('unread_by', [])
-                }
-                emit('message', msg_data)
+            # 统一消息格式
+            msg_data = {
+                'id': str(message.get('_id', '')),
+                'text': message.get('text', ''),
+                'username': message.get('username', ''),
+                'timestamp': message.get('timestamp', datetime.now().strftime('%H:%M')),
+                'type': message.get('type', 'text'),
+                'read_by': message.get('read_by', []),
+                'unread_by': message.get('unread_by', [])
+            }
+
+            # 获取用户头像
+            user_data = current_app.db.users.find_one({'username': msg_data['username']})
+            msg_data['avatar_url'] = user_data.get('avatar_url') if user_data else f"https://api.dicebear.com/7.x/avataaars/svg?seed={msg_data['username']}"
+
+            # 处理特殊消息类型
+            if message.get('type') == 'file':
+                msg_data.update({
+                    'filename': message.get('filename', ''),
+                    'url': message.get('url', ''),
+                    'size': message.get('size', 0)
+                })
+
+            emit('message', msg_data)
                 
         logger.info('历史消息发送完成')
         
@@ -286,12 +282,9 @@ def handle_message(data):
         all_users = list(current_app.db.users.find({}, {'username': 1}))
         other_users = [user['username'] for user in all_users if user['username'] != current_user.username]
         
-        # 处理消息文本
-        message_text = data if isinstance(data, str) else data.get('text', '')
-        
         # 创建消息数据
         message_data = {
-            'text': message_text,
+            'text': data if isinstance(data, str) else data.get('text', ''),
             'username': current_user.username,
             'avatar_url': avatar_url,
             'timestamp': datetime.now().strftime('%H:%M'),
