@@ -227,62 +227,87 @@ def register():
 def handle_connect():
     if not current_user.is_authenticated:
         return False
-    messages = current_app.db.messages.find()
-    for message in messages:
-        if isinstance(message.get('message'), dict):
-            msg_data = message['message']
-            # 如果消息没有头像URL，尝试从用户数据获取
-            if 'avatar_url' not in msg_data:
-                user_data = current_app.db.users.find_one({'username': msg_data['username']})
-                if user_data and 'avatar_url' in user_data:
-                    msg_data['avatar_url'] = user_data['avatar_url']
-        else:
-            user_data = current_app.db.users.find_one({'username': current_user.username})
-            msg_data = {
-                'text': message.get('message', ''),
-                'username': current_user.username,
-                'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
-                'timestamp': datetime.now().strftime('%H:%M')
-            }
-        emit('message', msg_data)
+    
+    try:
+        # 获取所有消息
+        messages = list(current_app.db.messages.find())
+        logger.info(f'获取到 {len(messages)} 条历史消息')
+        
+        for message in messages:
+            # 确保消息有 _id
+            message['id'] = str(message.get('_id', ''))
+            
+            # 如果消息是字典格式
+            if isinstance(message.get('message'), dict):
+                msg_data = message['message']
+                # 如果消息没有头像URL，尝试从用户数据获取
+                if 'avatar_url' not in msg_data:
+                    user_data = current_app.db.users.find_one({'username': msg_data['username']})
+                    if user_data and 'avatar_url' in user_data:
+                        msg_data['avatar_url'] = user_data['avatar_url']
+                emit('message', msg_data)
+            else:
+                # 处理普通文本消息
+                user_data = current_app.db.users.find_one({'username': message.get('username', current_user.username)})
+                avatar_url = user_data.get('avatar_url') if user_data else None
+                
+                msg_data = {
+                    'id': message['id'],
+                    'text': message.get('text', ''),
+                    'username': message.get('username', current_user.username),
+                    'avatar_url': avatar_url or f"https://api.dicebear.com/7.x/avataaars/svg?seed={message.get('username', current_user.username)}",
+                    'timestamp': message.get('timestamp', datetime.now().strftime('%H:%M')),
+                    'type': message.get('type', 'text'),
+                    'read_by': message.get('read_by', []),
+                    'unread_by': message.get('unread_by', [])
+                }
+                emit('message', msg_data)
+                
+        logger.info('历史消息发送完成')
+        
+    except Exception as e:
+        logger.error(f'处理连接时出错: {str(e)}')
+        return False
 
 
 @socketio.on('message')
-@login_required
 def handle_message(data):
     if not current_user.is_authenticated:
         return
 
     try:
         logger.info(f'处理来自 {current_user.username} 的消息: {data}')
-
+        
         # 获取用户数据
         user_data = current_app.db.users.find_one({'username': current_user.username})
         avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
-
+        
         # 获取所有在线用户
         all_users = list(current_app.db.users.find({}, {'username': 1}))
         other_users = [user['username'] for user in all_users if user['username'] != current_user.username]
-
+        
+        # 处理消息文本
+        message_text = data if isinstance(data, str) else data.get('text', '')
+        
         # 创建消息数据
         message_data = {
-            'text': data['text'],  # 确保从data中获取text字段
+            'text': message_text,
             'username': current_user.username,
             'avatar_url': avatar_url,
             'timestamp': datetime.now().strftime('%H:%M'),
-            'type': data.get('type', 'text'),  # 确保从data中获取type字段
-            'read_by': [current_user.username],  # 发送者默认已读
-            'unread_by': other_users  # 其他所有用户未读
+            'type': 'text',
+            'read_by': [current_user.username],
+            'unread_by': other_users
         }
-
+        
         # 保存到数据库
         result = current_app.db.messages.insert_one(message_data)
-        message_data['_id'] = str(result.inserted_id)
-
+        message_data['id'] = str(result.inserted_id)
+        
         # 广播消息
         emit('message', message_data, broadcast=True)
-        logger.info(f'消息发送成功: {message_data["_id"]}')
-
+        logger.info(f'消息发送成功: {message_data["id"]}')
+        
     except Exception as e:
         logger.error(f'处理消息时出错: {str(e)}')
 
