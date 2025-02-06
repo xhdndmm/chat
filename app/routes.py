@@ -21,6 +21,8 @@ bp = Blueprint('main', __name__)
 
 
 
+
+
 # 配置文件上传
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'uploads')
 ALLOWED_EXTENSIONS = {
