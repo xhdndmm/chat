@@ -26,6 +26,10 @@ jobs:
                   DOCKER_COMPOSE_FILE_PATH: ${{ secrets.DOCKER_COMPOSE_FILE_PATH }}
               run: |
                   echo "Deploying application to ECS..."
+                  echo "ECS_HOST: $ECS_HOST"
+                  echo "ECS_USER: $ECS_USER"
+                  echo "ECS_SSH_PORT: $ECS_SSH_PORT"
+                  echo "DOCKER_COMPOSE_FILE_PATH: $DOCKER_COMPOSE_FILE_PATH"
                   ssh -o StrictHostKeyChecking=no -p $ECS_SSH_PORT $ECS_USER@$ECS_HOST "
                     cd $(dirname $DOCKER_COMPOSE_FILE_PATH) &&
                     docker compose -f $DOCKER_COMPOSE_FILE_PATH down &&
