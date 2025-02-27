@@ -230,51 +230,82 @@ def register():
 def handle_connect():
     if not current_user.is_authenticated:
         return False
-    messages = current_app.db.messages.find()
-    for message in messages:
-        if isinstance(message.get('message'), dict):
-            msg_data = message['message']
-            # 如果消息没有头像URL，尝试从用户数据获取
-            if 'avatar_url' not in msg_data:
-                user_data = current_app.db.users.find_one({'username': msg_data['username']})
-                if user_data and 'avatar_url' in user_data:
-                    msg_data['avatar_url'] = user_data['avatar_url']
-        else:
-            user_data = current_app.db.users.find_one({'username': current_user.username})
+    
+    try:
+        # 获取所有消息
+        messages = list(current_app.db.messages.find())
+        logger.info(f'获取到 {len(messages)} 条历史消息')
+        
+        for message in messages:
+            # 统一消息格式
             msg_data = {
-                'text': message.get('message', ''),
-                'username': current_user.username,
-                'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
-                'timestamp': datetime.now().strftime('%H:%M')
+                'id': str(message.get('_id', '')),
+                'text': message.get('text', ''),
+                'username': message.get('username', ''),
+                'timestamp': message.get('timestamp', datetime.now().strftime('%H:%M')),
+                'type': message.get('type', 'text'),
+                'read_by': message.get('read_by', []),
+                'unread_by': message.get('unread_by', [])
             }
-        emit('message', msg_data)
+
+            # 获取用户头像
+            user_data = current_app.db.users.find_one({'username': msg_data['username']})
+            msg_data['avatar_url'] = user_data.get('avatar_url') if user_data else f"https://api.dicebear.com/7.x/avataaars/svg?seed={msg_data['username']}"
+
+            # 处理特殊消息类型
+            if message.get('type') == 'file':
+                msg_data.update({
+                    'filename': message.get('filename', ''),
+                    'url': message.get('url', ''),
+                    'size': message.get('size', 0)
+                })
+
+            emit('message', msg_data)
+                
+        logger.info('历史消息发送完成')
+        
+    except Exception as e:
+        logger.error(f'处理连接时出错: {str(e)}')
+        return False
 
 
 @socketio.on('message')
-@login_required
 def handle_message(data):
-    logger.info(f'Handling message from {current_user.username}: {data}')  # 添加日志
-    user_data = current_app.db.users.find_one({'username': current_user.username})
-    avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
-
-    message_id = str(ObjectId())
-    message_data = {
-        'id': message_id,
-        'text': data,
-        'username': current_user.username,
-        'avatar_url': avatar_url,
-        'timestamp': datetime.now().strftime('%H:%M'),
-        'status': 'sent',
-        'edited': False,
-        'type': 'text'
-    }
+    if not current_user.is_authenticated:
+        return
 
     try:
-        current_app.db.messages.insert_one({'message': message_data})
+        logger.info(f'处理来自 {current_user.username} 的消息: {data}')
+        
+        # 获取用户数据
+        user_data = current_app.db.users.find_one({'username': current_user.username})
+        avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
+        
+        # 获取所有在线用户
+        all_users = list(current_app.db.users.find({}, {'username': 1}))
+        other_users = [user['username'] for user in all_users if user['username'] != current_user.username]
+        
+        # 创建消息数据
+        message_data = {
+            'text': data if isinstance(data, str) else data.get('text', ''),
+            'username': current_user.username,
+            'avatar_url': avatar_url,
+            'timestamp': datetime.now().strftime('%H:%M'),
+            'type': 'text',
+            'read_by': [current_user.username],
+            'unread_by': other_users
+        }
+        
+        # 保存到数据库
+        result = current_app.db.messages.insert_one(message_data)
+        message_data['id'] = str(result.inserted_id)
+        
+        # 广播消息
         emit('message', message_data, broadcast=True)
-        logger.info(f'Message sent successfully: {message_id}')  # 添加日志
+        logger.info(f'消息发送成功: {message_data["id"]}')
+        
     except Exception as e:
-        logger.error(f'Error sending message: {str(e)}')  # 添加错误日志
+        logger.error(f'处理消息时出错: {str(e)}')
 
 
 @socketio.on('edit_message')
@@ -492,6 +523,9 @@ def contact_admin():
 
 STICKER_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'stickers')
 os.makedirs(STICKER_FOLDER, exist_ok=True)
+
+EMOJI_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'emojis')
+os.makedirs(EMOJI_FOLDER, exist_ok=True)
 
 @bp.route('/upload_sticker', methods=['POST'])
 @login_required
@@ -758,7 +792,310 @@ def server_status():
     memory_info = psutil.virtual_memory()
     memory_usage = memory_info.percent
 
+    # 获取硬盘使用情况
+    disk_info = psutil.disk_usage('/')
+    disk_usage = disk_info.percent
+    disk_total = disk_info.total // (1024 * 1024 * 1024)  # 转换为GB
+    disk_used = disk_info.used // (1024 * 1024 * 1024)    # 转换为GB
+    disk_free = disk_info.free // (1024 * 1024 * 1024)    # 转换为GB
+
     return jsonify({
         'cpu_usage': cpu_usage,
-        'memory_usage': memory_usage
+        'memory_usage': memory_usage,
+        'disk_usage': disk_usage,
+        'disk_total': disk_total,
+        'disk_used': disk_used,
+        'disk_free': disk_free
     })
+
+# WebSocket事件：发送群组消息
+@socketio.on('group_message')
+def handle_group_message(data):
+    """
+    处理群组消息的WebSocket事件
+    :param data: 包含group_id和message的数据
+    """
+    group_id = data['group_id']
+    message = data['message']
+
+    # 验证用户是否在群组中
+    group = current_app.db.groups.find_one({
+        'id': group_id,
+        'members': current_user.username
+    })
+    if not group:
+        return
+
+    # 创建消息数据，添加已读状态跟踪
+    message_data = {
+        'group_id': group_id,
+        'text': message,
+        'username': current_user.username,
+        'timestamp': datetime.now(),
+        'type': 'text',
+        'read_by': [current_user.username],  # 发送者默认已读
+        'unread_by': [member for member in group['members'] if member != current_user.username]  # 其他成员未读
+    }
+
+    # 保存消息到数据库
+    message_id = current_app.db.group_messages.insert_one(message_data).inserted_id
+    message_data['id'] = str(message_id)
+
+    # 广播消息给群组所有在线成员
+    emit('group_message', {
+        'id': str(message_id),
+        'text': message,
+        'username': current_user.username,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'group_id': group_id,
+        'read_by': message_data['read_by'],
+        'unread_by': message_data['unread_by']
+    }, room=f'group_{group_id}')
+
+# 标记群组消息为已读
+@bp.route('/mark_group_message_read/<message_id>', methods=['POST'])
+@login_required
+def mark_group_message_read(message_id):
+    """标记群组消息为已读"""
+    message = current_app.db.group_messages.find_one({'_id': ObjectId(message_id)})
+    if not message:
+        return jsonify({'error': '消息不存在'}), 404
+
+    # 验证用户是否在群组中
+    group = current_app.db.groups.find_one({
+        'id': message['group_id'],
+        'members': current_user.username
+    })
+    if not group:
+        return jsonify({'error': '无权访问该消息'}), 403
+
+    # 更新消息的已读状态
+    current_app.db.group_messages.update_one(
+        {'_id': ObjectId(message_id)},
+        {
+            '$addToSet': {'read_by': current_user.username},
+            '$pull': {'unread_by': current_user.username}
+        }
+    )
+
+    # 获取更新后的消息数据
+    updated_message = current_app.db.group_messages.find_one({'_id': ObjectId(message_id)})
+
+    # 广播消息已读状态更新
+    socketio.emit('message_read_status_updated', {
+        'message_id': message_id,
+        'read_by': updated_message['read_by'],
+        'unread_by': updated_message['unread_by']
+    }, room=f"group_{message['group_id']}")
+
+    return jsonify({'success': True})
+
+# WebSocket事件：发送私聊消息
+@socketio.on('private_message')
+def handle_private_message(data):
+    """处理私聊消息的WebSocket事件"""
+    chat_id = data['chat_id']
+    message = data['message']
+
+    # 验证用户是否是私聊参与者
+    chat = current_app.db.private_chats.find_one({
+        '_id': ObjectId(chat_id),
+        '$or': [
+            {'user1': current_user.username},
+            {'user2': current_user.username}
+        ]
+    })
+
+    if not chat:
+        return
+
+    # 获取对方用户名
+    other_user = chat['user2'] if chat['user1'] == current_user.username else chat['user1']
+
+    # 创建消息数据，添加已读状态
+    message_data = {
+        'chat_id': chat_id,
+        'text': message,
+        'sender': current_user.username,
+        'timestamp': datetime.now(),
+        'type': 'text',
+        'read_by': [current_user.username],  # 发送者默认已读
+        'unread_by': [other_user]  # 接收者未读
+    }
+
+    # 保存消息到数据库
+    message_id = current_app.db.private_messages.insert_one(message_data).inserted_id
+
+    # 更新私聊的最后一条消息
+    current_app.db.private_chats.update_one(
+        {'_id': ObjectId(chat_id)},
+        {
+            '$set': {
+                'last_message': message,
+                'last_message_time': datetime.now(),
+                'unread_count': current_app.db.private_messages.count_documents({
+                    'chat_id': chat_id,
+                    'unread_by': other_user
+                })
+            }
+        }
+    )
+
+    # 发送消息给私聊房间的所有用户
+    emit('private_message', {
+        'id': str(message_id),
+        'text': message,
+        'sender': current_user.username,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'chat_id': chat_id,
+        'read_by': message_data['read_by'],
+        'unread_by': message_data['unread_by']
+    }, room=f'private_{chat_id}')
+
+# 标记私聊消息为已读
+@bp.route('/mark_private_message_read/<message_id>', methods=['POST'])
+@login_required
+def mark_private_message_read(message_id):
+    """标记私聊消息为已读"""
+    message = current_app.db.private_messages.find_one({'_id': ObjectId(message_id)})
+    if not message:
+        return jsonify({'error': '消息不存在'}), 404
+
+    # 验证用户是否是私聊参与者
+    chat = current_app.db.private_chats.find_one({
+        '_id': ObjectId(message['chat_id']),
+        '$or': [
+            {'user1': current_user.username},
+            {'user2': current_user.username}
+        ]
+    })
+    if not chat:
+        return jsonify({'error': '无权访问该消息'}), 403
+
+    # 更新消息的已读状态
+    current_app.db.private_messages.update_one(
+        {'_id': ObjectId(message_id)},
+        {
+            '$addToSet': {'read_by': current_user.username},
+            '$pull': {'unread_by': current_user.username}
+        }
+    )
+
+    # 更新私聊的未读消息计数
+    unread_count = current_app.db.private_messages.count_documents({
+        'chat_id': message['chat_id'],
+        'unread_by': current_user.username
+    })
+    current_app.db.private_chats.update_one(
+        {'_id': ObjectId(message['chat_id'])},
+        {'$set': {'unread_count': unread_count}}
+    )
+
+    # 获取更新后的消息数据
+    updated_message = current_app.db.private_messages.find_one({'_id': ObjectId(message_id)})
+
+    # 广播消息已读状态更新
+    socketio.emit('message_read_status_updated', {
+        'message_id': message_id,
+        'read_by': updated_message['read_by'],
+        'unread_by': updated_message['unread_by']
+    }, room=f"private_{message['chat_id']}")
+
+    return jsonify({'success': True})
+
+@socketio.on('mark_message_read')
+def handle_message_read(data):
+    if not current_user.is_authenticated:
+        return
+
+    try:
+        message_id = data['message_id']
+        logger.info(f'标记消息 {message_id} 为已读 (用户: {current_user.username})')
+
+        # 从数据库获取消息
+        message = current_app.db.messages.find_one({'_id': ObjectId(message_id)})
+        if not message:
+            logger.warning(f'消息 {message_id} 不存在')
+            return
+
+        # 更新已读未读状态
+        read_by = set(message.get('read_by', []))
+        unread_by = set(message.get('unread_by', []))
+
+        # 将当前用户添加到已读列表
+        if current_user.username not in read_by:
+            read_by.add(current_user.username)
+            # 从未读列表中移除当前用户
+            if current_user.username in unread_by:
+                unread_by.remove(current_user.username)
+
+            # 更新数据库
+            current_app.db.messages.update_one(
+                {'_id': ObjectId(message_id)},
+                {
+                    '$set': {
+                        'read_by': list(read_by),
+                        'unread_by': list(unread_by)
+                    }
+                }
+            )
+
+            # 广播更新状态
+            emit('message_read_status', {
+                'message_id': message_id,
+                'read_by': list(read_by),
+                'unread_by': list(unread_by)
+            }, broadcast=True)
+
+            logger.info(f'消息 {message_id} 的已读状态已更新')
+
+    except Exception as e:
+        logger.error(f'处理消息已读状态时出错: {str(e)}')
+
+@socketio.on('mark_message_unread')
+def handle_message_unread(data):
+    if not current_user.is_authenticated:
+        return
+
+    try:
+        message_id = data['message_id']
+        logger.info(f'标记消息 {message_id} 为未读 (用户: {current_user.username})')
+
+        # 从数据库获取消息
+        message = current_app.db.messages.find_one({'_id': ObjectId(message_id)})
+        if not message:
+            logger.warning(f'消息 {message_id} 不存在')
+            return
+
+        # 更新已读未读状态
+        read_by = set(message.get('read_by', []))
+        unread_by = set(message.get('unread_by', []))
+
+        # 将当前用户从已读列表中移除
+        if current_user.username in read_by:
+            read_by.remove(current_user.username)
+            # 将当前用户添加到未读列表
+            unread_by.add(current_user.username)
+
+            # 更新数据库
+            current_app.db.messages.update_one(
+                {'_id': ObjectId(message_id)},
+                {
+                    '$set': {
+                        'read_by': list(read_by),
+                        'unread_by': list(unread_by)
+                    }
+                }
+            )
+
+            # 广播更新状态
+            emit('message_read_status', {
+                'message_id': message_id,
+                'read_by': list(read_by),
+                'unread_by': list(unread_by)
+            }, broadcast=True)
+
+            logger.info(f'消息 {message_id} 的未读状态已更新')
+
+    except Exception as e:
+        logger.error(f'处理消息未读状态时出错: {str(e)}')
