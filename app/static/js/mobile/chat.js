@@ -197,8 +197,7 @@ form.addEventListener('submit', (e) => {
             text: messageText,
             username: window.CHAT_CONFIG.currentUser.username,
             timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-            avatar_url: window.CHAT_CONFIG.currentUser.avatar_url,
-            type: 'text' // 添加消息类型
+            avatar_url: window.CHAT_CONFIG.currentUser.avatar_url
         };
         socket.emit('message', messageData);
         input.value = '';
