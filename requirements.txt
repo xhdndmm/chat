@@ -9,5 +9,3 @@ flask-socketio
 Flask-Login
 gunicorn
 psutil
-greenlet
-gevent
