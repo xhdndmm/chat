@@ -8,6 +8,3 @@ python-dotenv
 flask-socketio
 Flask-Login
 gunicorn
-psutil
-greenlet
-gevent

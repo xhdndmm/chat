@@ -25,24 +25,10 @@
                     <li>邮箱：</li>
                     <li>微信：</li>
                 </ul>
-                <form method="post" action="{{ url_for('main.register') }}">
-                    <div class="form-group">
-                        <label for="username">用户名</label>
-                        <input type="text" id="username" name="username" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">密码</label>
-                        <input type="password" id="password" name="password" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="info">信息</label>
-                        <textarea id="info" name="info" required></textarea>
-                    </div>
-                    <button type="submit" class="back-btn">提交注册申请</button>
-                </form>
             </div>
             <a href="{{ url_for('main.login') }}" class="back-btn">返回登录</a>
+            <a href="{{ url_for('main.agreement') }}" class="back-btn">用户协议</a>
         </div>
     </div>
 </body>
-</html>
+</html> 

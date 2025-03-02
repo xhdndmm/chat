@@ -14,13 +14,9 @@ from config.log_config import logger
 from functools import wraps
 import zipfile
 import io
-import psutil
 
 
 bp = Blueprint('main', __name__)
-
-
-
 
 
 # 配置文件上传
@@ -58,7 +54,6 @@ ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # 确保头像目录存在
 os.makedirs(AVATAR_FOLDER, exist_ok=True)
 
-
 def allowed_avatar(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
@@ -81,10 +76,10 @@ def login():
         username = request.form['username']
         password = request.form['password']
         print(f"尝试登录: {username}")  # 调试日志
-
+        
         user_data = current_app.db.users.find_one({'username': username})
         print(f"数据库查询结果: {user_data}")  # 调试日志
-
+        
         if user_data:
             user = User(user_data['username'], user_data['password'])
             if user.check_password(password):
@@ -106,14 +101,9 @@ def logout():
 @bp.route('/')
 @login_required
 def index():
-    # 通过 User-Agent 判断是否为移动设备
-    user_agent = request.headers.get('User-Agent', '').lower()
-    is_mobile = any(device in user_agent for device in ['iphone', 'android', 'mobile'])
-
-    if is_mobile:
-        print("检测到移动设备，加载移动端模板")  # 添加调试日志
-        return render_template('mobile/chat.html')
-    print("检测到桌面设备，加载桌面端模板")  # 添加调试日志
+    user_agent = request.headers.get('User-Agent').lower()
+    if 'mobile' in user_agent:
+        return redirect(url_for('main.mobile_chat'))
     return render_template('chat.html')
 
 
@@ -125,7 +115,7 @@ def admin():
         username = request.form['username']
         password = request.form['password']
         is_admin = 'is_admin' in request.form
-
+        
         # 检查是否是编辑操作
         edit_username = request.form.get('editUsername')
         if edit_username:
@@ -152,10 +142,9 @@ def admin():
                 flash('用户创建成功')
             else:
                 flash('用户已存在')
-
+    
     users = list(current_app.db.users.find())
-    register_requests = list(current_app.db.register_requests.find())
-    return render_template('admin.html', users=users, register_requests=register_requests)
+    return render_template('admin.html', users=users)
 
 
 @bp.route('/admin/delete/<username>', methods=['POST'])
@@ -164,7 +153,7 @@ def admin():
 def delete_user(username):
     if username == 'admin':
         return jsonify({'success': False, 'message': '不能删除管理员账号'})
-
+    
     current_app.db.users.delete_one({'username': username})
     return jsonify({'success': True})
 
@@ -180,101 +169,37 @@ def reset_password(username):
     return jsonify({'success': True, 'message': f'用户 {username} 的密码已重置为: 123456'})
 
 
-@bp.route('/admin/approve_request/<username>', methods=['POST'])
-@login_required
-@admin_required
-def approve_request(username):
-    request_data = current_app.db.register_requests.find_one({'username': username})
-    if request_data:
-        current_app.db.users.insert_one({
-            'username': request_data['username'],
-            'password': request_data['password'],
-            'is_admin': False,
-            'created_at': datetime.now(),
-            'status': '正常'
-        })
-        current_app.db.register_requests.delete_one({'username': username})
-        return jsonify({'success': True})
-    return jsonify({'success': False, 'message': '注册申请不存在'})
-
-@bp.route('/admin/reject_request/<username>', methods=['POST'])
-@login_required
-@admin_required
-def reject_request(username):
-    current_app.db.register_requests.delete_one({'username': username})
-    return jsonify({'success': True})
-
-
-@bp.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        info = request.form['info']
-
-        if current_app.db.register_requests.find_one({'username': username}):
-            flash('注册申请已存在')
-        else:
-            current_app.db.register_requests.insert_one({
-                'username': username,
-                'password': password,
-                'info': info,
-                'created_at': datetime.now()
-            })
-            flash('注册申请已提交')
-
-    return render_template('contact_admin.html')
-
-
 @socketio.on('connect')
 def handle_connect():
     if not current_user.is_authenticated:
         return False
-    
-    try:
-        # 获取所有消息
-        messages = list(current_app.db.messages.find())
-        logger.info(f'获取到 {len(messages)} 条历史消息')
-        
-        for message in messages:
-            # 统一消息格式
+    messages = current_app.db.messages.find()
+    for message in messages:
+        if isinstance(message.get('message'), dict):
+            msg_data = message['message']
+            # 如果消息没有头像URL，尝试从用户数据获取
+            if 'avatar_url' not in msg_data:
+                user_data = current_app.db.users.find_one({'username': msg_data['username']})
+                if user_data and 'avatar_url' in user_data:
+                    msg_data['avatar_url'] = user_data['avatar_url']
+        else:
+            user_data = current_app.db.users.find_one({'username': current_user.username})
             msg_data = {
-                'id': str(message.get('_id', '')),
-                'text': message.get('text', ''),
-                'username': message.get('username', ''),
-                'timestamp': message.get('timestamp', datetime.now().strftime('%H:%M')),
-                'type': message.get('type', 'text'),
-                'read_by': message.get('read_by', []),
-                'unread_by': message.get('unread_by', [])
+                'text': message.get('message', ''),
+                'username': current_user.username,
+                'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
+                'timestamp': datetime.now().strftime('%H:%M')
             }
-
-            # 获取用户头像
-            user_data = current_app.db.users.find_one({'username': msg_data['username']})
-            msg_data['avatar_url'] = user_data.get('avatar_url') if user_data else f"https://api.dicebear.com/7.x/avataaars/svg?seed={msg_data['username']}"
-
-            # 处理特殊消息类型
-            if message.get('type') == 'file':
-                msg_data.update({
-                    'filename': message.get('filename', ''),
-                    'url': message.get('url', ''),
-                    'size': message.get('size', 0)
-                })
-
-            emit('message', msg_data)
-                
-        logger.info('历史消息发送完成')
-        
-    except Exception as e:
-        logger.error(f'处理连接时出错: {str(e)}')
-        return False
+        emit('message', msg_data)
 
 
 @socketio.on('message')
+@login_required
 def handle_message(data):
     logger.info(f'Handling message from {current_user.username}: {data}')  # 添加日志
     user_data = current_app.db.users.find_one({'username': current_user.username})
     avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
-
+    
     message_id = str(ObjectId())
     message_data = {
         'id': message_id,
@@ -286,7 +211,7 @@ def handle_message(data):
         'edited': False,
         'type': 'text'
     }
-
+    
     try:
         current_app.db.messages.insert_one({'message': message_data})
         emit('message', message_data, broadcast=True)
@@ -300,14 +225,14 @@ def handle_message(data):
 def handle_edit_message(data):
     message_id = data.get('id')
     new_text = data.get('text')
-
+    
     if message_id and new_text:
         # 检查是否是消息作者
         message = current_app.db.messages.find_one({
             'message.id': message_id,
             'message.username': current_user.username
         })
-
+        
         if message:
             current_app.db.messages.update_one(
                 {'message.id': message_id},
@@ -328,14 +253,14 @@ def handle_edit_message(data):
 @login_required
 def handle_delete_message(data):
     message_id = data.get('id')
-
+    
     if message_id:
         # 检查是否是消息作者
         message = current_app.db.messages.find_one({
             'message.id': message_id,
             'message.username': current_user.username
         })
-
+        
         if message:
             current_app.db.messages.delete_one({'message.id': message_id})
             emit('message_deleted', {'id': message_id}, broadcast=True)
@@ -348,10 +273,10 @@ typing_users = {}
 def handle_typing(data):
     if not current_user.is_authenticated:
         return
-
+    
     status = data.get('status', 'typing')
     print(f"User {current_user.username} typing status: {status}")  # 添加调试日志
-
+    
     if status == 'typing':
         typing_users[current_user.username] = datetime.now()
         emit('typing_status', {
@@ -372,29 +297,29 @@ def handle_typing(data):
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': '没有文件被上传'}), 400
-
+    
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': '未选择文件'}), 400
-
+        
     if file and allowed_file(file.filename):
         # 获取文件大小
         file.seek(0, 2)
         file_size = file.tell()
         file.seek(0)
-
+        
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
         filename = timestamp + filename
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(file_path)
-
+        
         file_url = url_for('static', filename=f'uploads/{filename}')
-
+        
         # 获取最新的用户数据和头像URL
         user_data = current_app.db.users.find_one({'username': current_user.username})
         avatar_url = user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}")
-
+        
         message_id = str(ObjectId())
         message_data = {
             'id': message_id,
@@ -407,17 +332,17 @@ def upload_file():
             'timestamp': datetime.now().strftime('%H:%M'),
             'status': 'sent'
         }
-
+        
         current_app.db.messages.insert_one({'message': message_data})
         socketio.emit('message', message_data, namespace='/')
-
+        
         return jsonify({
             'success': True,
             'file_url': file_url,
             'filename': file.filename,
             'size': file_size
         })
-
+    
     return jsonify({'error': '不支持的文件类型'}), 400
 
 
@@ -432,18 +357,18 @@ def settings():
                 if allowed_avatar(file.filename):
                     # 确保头像目录存在
                     os.makedirs(AVATAR_FOLDER, exist_ok=True)
-
+                    
                     # 生成唯一的文件名
                     filename = secure_filename(f"{current_user.username}_{int(time.time())}.jpg")
                     filepath = os.path.join(AVATAR_FOLDER, filename)
-
+                    
                     try:
                         # 保存文件
                         file.save(filepath)
                         logger.info(f"头像上传成功: {filename}")
                         # 生成URL
                         avatar_url = url_for('static', filename=f'avatars/{filename}')
-
+                        
                         # 更新用户头像
                         current_app.db.users.update_one(
                             {'username': current_user.username},
@@ -455,7 +380,7 @@ def settings():
                             {'message.username': current_user.username},
                             {'$set': {'message.avatar_url': avatar_url}}
                         )
-
+                        
                         flash('头像更新成功')
                         return redirect(url_for('main.settings'))
                     except Exception as e:
@@ -472,15 +397,15 @@ def settings():
             'bio': request.form.get('bio', ''),
             'email': request.form.get('email', '')
         }
-
+        
         current_app.db.users.update_one(
             {'username': current_user.username},
             {'$set': {'settings': settings}}
         )
-
+        
         flash('设置已更新')
         return redirect(url_for('main.settings'))
-
+        
     # GET 请求显示设置页面
     user_data = current_app.db.users.find_one({'username': current_user.username})
     return render_template('settings.html', user=user_data)
@@ -511,32 +436,29 @@ def contact_admin():
 STICKER_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'stickers')
 os.makedirs(STICKER_FOLDER, exist_ok=True)
 
-EMOJI_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'static', 'emojis')
-os.makedirs(EMOJI_FOLDER, exist_ok=True)
-
 @bp.route('/upload_sticker', methods=['POST'])
 @login_required
 def upload_sticker():
     logger.info('收到贴纸上传请求')
-
+    
     if 'sticker' not in request.files:
         logger.error('没有文件被上传')
         return jsonify({'error': '没有文件被上传'}), 400
-
+    
     file = request.files['sticker']
     if file.filename == '':
         logger.error('未选择文件')
         return jsonify({'error': '未选择文件'}), 400
-
+        
     if allowed_file(file.filename):
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
         filename = timestamp + filename
         sticker_path = os.path.join(STICKER_FOLDER, filename)
-
+        
         logger.info(f'保存贴纸到: {sticker_path}')
         file.save(sticker_path)
-
+        
         # 保存贴纸信息到数据库
         sticker_url = url_for('static', filename=f'stickers/{filename}')
         current_app.db.stickers.insert_one({
@@ -545,13 +467,13 @@ def upload_sticker():
             'created_at': datetime.now(),
             'pack_name': '我的贴纸'
         })
-
+        
         logger.info(f'贴纸上传成功: {sticker_url}')
         return jsonify({
             'success': True,
             'url': sticker_url
         })
-
+    
     logger.error('不支持的文件类型')
     return jsonify({'error': '不支持的文件类型'}), 400
 
@@ -579,25 +501,25 @@ def delete_sticker():
     url = request.json.get('url')
     if not url:
         return jsonify({'error': '未指定贴纸'}), 400
-
+    
     try:
         # 从数据库中删除贴纸记录
         result = current_app.db.stickers.delete_one({
             'username': current_user.username,
             'url': url
         })
-
+        
         if result.deleted_count > 0:
             # 从文件系统中删除贴纸文件
             filename = url.split('/')[-1]
             file_path = os.path.join(STICKER_FOLDER, filename)
             if os.path.exists(file_path):
                 os.remove(file_path)
-
+            
             return jsonify({'success': True})
         else:
             return jsonify({'error': '贴纸不存在或无权删除'}), 404
-
+            
     except Exception as e:
         logger.error(f'Error deleting sticker: {str(e)}')
         return jsonify({'error': '删除贴纸失败'}), 500
@@ -607,17 +529,17 @@ def delete_sticker():
 def upload_sticker_pack():
     if 'sticker_pack' not in request.files:
         return jsonify({'error': '没有文件被上传'}), 400
-
+    
     file = request.files['sticker_pack']
     pack_name = request.form.get('pack_name', '未命名贴纸包')
-
+    
     if file.filename == '' or not file.filename.endswith('.zip'):
         return jsonify({'error': '请上传ZIP格式的贴纸包'}), 400
-
+    
     try:
         zip_file = zipfile.ZipFile(io.BytesIO(file.read()))
         uploaded_stickers = []
-
+        
         # 创建贴纸包记录
         pack_id = str(ObjectId())
         current_app.db.sticker_packs.insert_one({
@@ -626,26 +548,26 @@ def upload_sticker_pack():
             'username': current_user.username,
             'created_at': datetime.now()
         })
-
+        
         # 处理压缩包中的每个文件
         for filename in zip_file.namelist():
             # 修改这里以支持 webm 格式
             if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.webm')):
                 # 读取文件数据
                 file_data = zip_file.read(filename)
-
+                
                 # 生成新文件名
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
                 new_filename = timestamp + secure_filename(filename)
                 file_path = os.path.join(STICKER_FOLDER, new_filename)
-
+                
                 # 保存文件
                 with open(file_path, 'wb') as f:
                     f.write(file_data)
-
+                
                 # 创建贴纸URL
                 sticker_url = url_for('static', filename=f'stickers/{new_filename}')
-
+                
                 # 保存贴纸信息到数据库
                 sticker_id = str(ObjectId())
                 current_app.db.stickers.insert_one({
@@ -656,22 +578,22 @@ def upload_sticker_pack():
                     'created_at': datetime.now(),
                     'type': 'webm' if filename.lower().endswith('.webm') else 'image'  # 添加类型标记
                 })
-
+                
                 uploaded_stickers.append(sticker_url)
                 logger.info(f'成功导入贴纸: {new_filename}')
-
+        
         if not uploaded_stickers:
             # 如果没有成功导入任何贴纸，删除贴纸包记录
             current_app.db.sticker_packs.delete_one({'id': pack_id})
             return jsonify({'error': '压缩包中没有有效的贴纸文件'}), 400
-
+        
         return jsonify({
             'success': True,
             'pack_id': pack_id,
             'pack_name': pack_name,
             'stickers': uploaded_stickers
         })
-
+        
     except Exception as e:
         logger.error(f'导入贴纸包失败: {str(e)}')
         # 发生错误时，尝试清理已创建的贴纸包
@@ -690,7 +612,7 @@ def get_sticker_packs():
             {'username': current_user.username},
             {'_id': 0, 'id': 1, 'name': 1}
         ))
-
+        
         # 为每个贴纸包获取其包含的贴纸
         for pack in packs:
             stickers = list(current_app.db.stickers.find(
@@ -698,7 +620,7 @@ def get_sticker_packs():
                 {'_id': 0, 'url': 1}
             ))
             pack['stickers'] = [s['url'] for s in stickers]
-
+        
         return jsonify(packs)
     except Exception as e:
         logger.error(f'Error getting sticker packs: {str(e)}')
@@ -710,44 +632,44 @@ def delete_sticker_pack():
     pack_id = request.json.get('pack_id')
     if not pack_id:
         return jsonify({'error': '未指定贴纸包'}), 400
-
+    
     try:
         # 检查贴纸包是否存在且属于当前用户
         pack = current_app.db.sticker_packs.find_one({
             'id': pack_id,
             'username': current_user.username
         })
-
+        
         if not pack:
             return jsonify({'error': '贴纸包不存在或无权删除'}), 404
-
+        
         # 获取包内所有贴纸
         stickers = list(current_app.db.stickers.find({
             'pack_id': pack_id,
             'username': current_user.username
         }))
-
+        
         # 删除所有贴纸文件
         for sticker in stickers:
             filename = sticker['url'].split('/')[-1]
             file_path = os.path.join(STICKER_FOLDER, filename)
             if os.path.exists(file_path):
                 os.remove(file_path)
-
+        
         # 从数据库中删除贴纸记录
         current_app.db.stickers.delete_many({
             'pack_id': pack_id,
             'username': current_user.username
         })
-
+        
         # 删除贴纸包记录
         current_app.db.sticker_packs.delete_one({
             'id': pack_id,
             'username': current_user.username
         })
-
+        
         return jsonify({'success': True})
-
+            
     except Exception as e:
         logger.error(f'Error deleting sticker pack: {str(e)}')
         return jsonify({'error': '删除贴纸包失败'}), 500
@@ -757,29 +679,55 @@ def delete_sticker_pack():
 def upload_emoji():
     if 'emoji' not in request.files:
         return jsonify({'error': '没有文件被上传'}), 400
-
+    
     file = request.files['emoji']
     if file.filename == '':
         return jsonify({'error': '未选择文件'}), 400
-
+        
     if allowed_file(file.filename):  # 确保您有一个函数来检查文件类型
         filename = secure_filename(file.filename)
         emoji_path = os.path.join(EMOJI_FOLDER, filename)  # 确保您定义了 EMOJI_FOLDER
         file.save(emoji_path)
-
+        
         # 这里可以将表情信息保存到数据库，或者直接返回成功信息
         return jsonify({'success': True, 'url': url_for('static', filename=f'emojis/{filename}')})
-
+    
     return jsonify({'error': '不支持的文件类型'}), 400
 
-#服务器状态
-@bp.route('/server_status')
-def server_status():
-    cpu_usage = psutil.cpu_percent(interval=1)
-    memory_info = psutil.virtual_memory()
-    memory_usage = memory_info.percent
+@bp.route('/mobile')
+@login_required
+def mobile_chat():
+    return render_template('chat_mobile.html')
 
-    return jsonify({
-        'cpu_usage': cpu_usage,
-        'memory_usage': memory_usage
-    })
+@bp.route('/mobile/load_history')
+@login_required
+def load_history():
+    """加载历史消息的API"""
+    try:
+        # 获取所有消息并按时间戳排序
+        messages = list(current_app.db.messages.find().sort('timestamp', 1).limit(50))
+        
+        formatted_messages = []
+        for msg in messages:
+            # 处理消息格式
+            if isinstance(msg.get('message'), dict):
+                # 如果是新格式消息
+                formatted_messages.append(msg)
+            else:
+                # 如果是旧格式消息，转换为新格式
+                formatted_messages.append({
+                    'id': str(msg['_id']),
+                    'message': {
+                        'text': msg.get('text', ''),
+                        'username': msg.get('username', ''),
+                        'timestamp': msg.get('timestamp', datetime.now()).strftime('%H:%M'),
+                        'avatar_url': msg.get('avatar_url', '')
+                    }
+                })
+        
+        return jsonify(formatted_messages)
+    except Exception as e:
+        print(f"Error loading history: {e}")
+        return jsonify([])
+
+
