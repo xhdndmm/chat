@@ -730,4 +730,70 @@ def load_history():
         print(f"Error loading history: {e}")
         return jsonify([])
 
+@bp.route('/api/server_status')
+@login_required
+def server_status():
+    """获取服务器状态信息的API"""
+    try:
+        import psutil
+        import time
+        
+        # 获取CPU信息
+        cpu_percent = psutil.cpu_percent(interval=0.5)
+        cpu_cores = psutil.cpu_percent(interval=0.5, percpu=True)
+        
+        # 获取内存信息
+        memory = psutil.virtual_memory()
+        
+        # 获取硬盘信息
+        disk = psutil.disk_usage('/')
+        
+        # 获取SWAP信息
+        swap = psutil.swap_memory()
+        
+        # 获取IO信息
+        io_start = psutil.disk_io_counters()
+        time.sleep(0.1)
+        io_end = psutil.disk_io_counters()
+        
+        read_bytes = io_end.read_bytes - io_start.read_bytes
+        write_bytes = io_end.write_bytes - io_start.write_bytes
+        
+        # 计算IO速率 (MB/s)
+        read_mb = read_bytes / 1024 / 1024 / 0.1
+        write_mb = write_bytes / 1024 / 1024 / 0.1
+        
+        # 计算IO使用率 (简单估算)
+        io_usage = min(100, (read_mb + write_mb) / 2)
+        
+        return jsonify({
+            'cpu': {
+                'usage': round(cpu_percent, 1),
+                'cores': [{'id': i, 'usage': round(percent, 1)} for i, percent in enumerate(cpu_cores)]
+            },
+            'memory': {
+                'total': memory.total // (1024 * 1024),  # MB
+                'used': memory.used // (1024 * 1024),    # MB
+                'usage': memory.percent
+            },
+            'disk': {
+                'total': disk.total // (1024 * 1024 * 1024),  # GB
+                'used': disk.used // (1024 * 1024 * 1024),    # GB
+                'usage': disk.percent
+            },
+            'swap': {
+                'total': swap.total // (1024 * 1024),  # MB
+                'used': swap.used // (1024 * 1024),    # MB
+                'usage': swap.percent
+            },
+            'io': {
+                'read': round(read_mb, 2),
+                'write': round(write_mb, 2),
+                'usage': round(io_usage, 1)
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取服务器状态失败: {str(e)}")
+        return jsonify({'error': '获取服务器状态失败'}), 500
+
 

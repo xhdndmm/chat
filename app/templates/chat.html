@@ -5,6 +5,7 @@
     <title>聊天室</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/server_status.css') }}">
     <style>
         /* 图片预览模态框样式 */
         .image-preview-modal {
@@ -312,6 +313,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/server_status.js') }}"></script>
     <script>
         // 添加图片预览函数
         function showImagePreview(url) {
