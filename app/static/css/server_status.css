@@ -1,0 +1,217 @@
+/* 服务器状态监控样式 */
+
+/* 普通用户视图 - 在源码仓库下方显示 */
+.server-status-user {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.server-status-user h4 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+/* 错误消息样式 */
+.error-message {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-size: 14px;
+    text-align: center;
+}
+
+.status-metrics {
+    display: flex;
+    gap: 20px;
+}
+
+.metric {
+    flex: 1;
+}
+
+.metric-title {
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.metric-bar {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.metric-fill {
+    height: 100%;
+    background-color: #4caf50;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.metric-value {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+    text-align: right;
+}
+
+/* CPU 使用率颜色 */
+.cpu-fill {
+    background-color: #2196F3;
+}
+
+/* 内存使用率颜色 */
+.memory-fill {
+    background-color: #FF9800;
+}
+
+/* 硬盘使用率颜色 */
+.disk-fill {
+    background-color: #9C27B0;
+}
+
+/* SWAP 使用率颜色 */
+.swap-fill {
+    background-color: #F44336;
+}
+
+/* IO 使用率颜色 */
+.io-fill {
+    background-color: #009688;
+}
+
+/* 管理员视图 - 浮动窗口 */
+.server-status-admin {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.server-status-admin.minimized {
+    width: 120px;
+    height: 60px;
+}
+
+.server-status-admin.maximized {
+    width: 500px;
+    height: 400px;
+}
+
+.status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #343a40;
+    color: white;
+    cursor: move;
+}
+
+.status-header h4 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.status-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.status-control {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-control:hover {
+    color: #ccc;
+}
+
+.status-body {
+    padding: 15px;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.status-section {
+    margin-bottom: 15px;
+}
+
+.status-section h5 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+/* CPU 核心视图 */
+.cpu-cores {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.cpu-core {
+    background-color: #f8f9fa;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.core-title {
+    font-size: 12px;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+/* 最小化状态 */
+.minimized .status-body {
+    padding: 10px;
+}
+
+.minimized .metric {
+    margin-bottom: 5px;
+}
+
+.minimized .status-section:not(.essential) {
+    display: none;
+}
+
+/* 最大化状态 */
+.maximized .cpu-cores {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+/* 动画效果 */
+@keyframes pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+.updating {
+    animation: pulse 1.5s infinite;
+} 

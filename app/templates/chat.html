@@ -5,6 +5,7 @@
     <title>聊天室</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/server_status.css') }}">
     <style>
         /* 图片预览模态框样式 */
         .image-preview-modal {
@@ -63,7 +64,7 @@
                     <div class="user-status">在线</div>
                 </div>
             </div>
-            
+
             <!-- 侧边栏图标 -->
             <div class="sidebar-icons">
                 <a href="javascript:void(0)" onclick="checkAdminAccess()" class="sidebar-icon" title="管理员">
@@ -86,7 +87,7 @@
                 </a>
             </div>
 
-            <!-- 开发团队列表和服务器状态 -->
+            <!-- 开发团队列表 -->
             <div class="dev-team">
                 <h3>开发团队</h3>
                 <div class="dev-list">
@@ -109,9 +110,6 @@
                         x h d n d m m
                     </a>
                     <a href="https://github.com/xhdndmm/chat">源码仓库</a>
-                    <p>
-                        服务器状态: <span id="server_status"></span>
-                    </p>
                 </div>
             </div>
         </div>
@@ -121,7 +119,7 @@
             <div class="chat-header">
                 <h3>公共聊天室</h3>
             </div>
-            
+
             <div class="messages" id="messages">
                 <!-- 消息会动态插入到这里 -->
             </div>
@@ -197,7 +195,7 @@
                                 </div>
                                 <span>导入贴纸包</span>
                             </div>
-                            <input type="file" id="pack-upload-input" style="display: none" 
+                            <input type="file" id="pack-upload-input" style="display: none"
                                    accept=".zip" onchange="uploadStickerPack(this)">
                             <!-- 添加上传单个贴纸的功能 -->
                             <div class="pack-upload-box" onclick="document.getElementById('sticker-upload-input').click()">
@@ -208,7 +206,7 @@
                                 </div>
                                 <span>导入单个贴纸</span>
                             </div>
-                            <input type="file" id="sticker-upload-input" style="display: none" 
+                            <input type="file" id="sticker-upload-input" style="display: none"
                                    accept=".png,.jpg,.jpeg" onchange="uploadSticker(this)">
                         </div>
                         <div class="sticker-container" style="max-height: 300px; overflow-y: auto;">
@@ -303,7 +301,7 @@
         window.CHAT_CONFIG = {
             currentUser: {
                 username: "{{ current_user.username }}",
-                isAdmin: "{{ current_user.is_admin|tojson|safe }}",
+                isAdmin: {{ current_user.is_admin|tojson|safe }},
                 avatarUrl: "{{ current_user.get_avatar_url() }}"
             },
             urls: {
@@ -315,12 +313,13 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/server_status.js') }}"></script>
     <script>
         // 添加图片预览函数
         function showImagePreview(url) {
             const modal = document.getElementById('imagePreviewModal');
             const previewImg = document.getElementById('previewImage');
-            
+
             previewImg.src = url;
             modal.style.display = 'block';
 
@@ -345,19 +344,6 @@
             };
             document.addEventListener('keydown', escHandler);
         }
-
-        //服务器状态
-        async function fetchServerStatus() {
-        try {
-            const response = await fetch('/server_status');
-            const data = await response.json();
-            document.getElementById('server_status').innerText = 
-                `CPU使用率: ${data.cpu_usage}%, 内存使用率: ${data.memory_usage}%`;
-        } catch (error) {
-            console.error('获取服务器状态失败:', error);
-        }
-    }
-    fetchServerStatus();
     </script>
 </body>
 </html>

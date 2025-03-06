@@ -14,13 +14,9 @@ from config.log_config import logger
 from functools import wraps
 import zipfile
 import io
-import psutil
 
 
 bp = Blueprint('main', __name__)
-
-
-
 
 
 # 配置文件上传
@@ -57,7 +53,6 @@ ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # 确保头像目录存在
 os.makedirs(AVATAR_FOLDER, exist_ok=True)
-
 
 def allowed_avatar(filename):
     return '.' in filename and \
@@ -106,14 +101,9 @@ def logout():
 @bp.route('/')
 @login_required
 def index():
-    # 通过 User-Agent 判断是否为移动设备
-    user_agent = request.headers.get('User-Agent', '').lower()
-    is_mobile = any(device in user_agent for device in ['iphone', 'android', 'mobile'])
-
-    if is_mobile:
-        print("检测到移动设备，加载移动端模板")  # 添加调试日志
-        return render_template('mobile/chat.html')
-    print("检测到桌面设备，加载桌面端模板")  # 添加调试日志
+    user_agent = request.headers.get('User-Agent').lower()
+    if 'mobile' in user_agent:
+        return redirect(url_for('main.mobile_chat'))
     return render_template('chat.html')
 
 
@@ -154,8 +144,7 @@ def admin():
                 flash('用户已存在')
 
     users = list(current_app.db.users.find())
-    register_requests = list(current_app.db.register_requests.find())
-    return render_template('admin.html', users=users, register_requests=register_requests)
+    return render_template('admin.html', users=users)
 
 
 @bp.route('/admin/delete/<username>', methods=['POST'])
@@ -180,56 +169,21 @@ def reset_password(username):
     return jsonify({'success': True, 'message': f'用户 {username} 的密码已重置为: 123456'})
 
 
-@bp.route('/admin/approve_request/<username>', methods=['POST'])
-@login_required
-@admin_required
-def approve_request(username):
-    request_data = current_app.db.register_requests.find_one({'username': username})
-    if request_data:
-        current_app.db.users.insert_one({
-            'username': request_data['username'],
-            'password': request_data['password'],
-            'is_admin': False,
-            'created_at': datetime.now(),
-            'status': '正常'
-        })
-        current_app.db.register_requests.delete_one({'username': username})
-        return jsonify({'success': True})
-    return jsonify({'success': False, 'message': '注册申请不存在'})
-
-@bp.route('/admin/reject_request/<username>', methods=['POST'])
-@login_required
-@admin_required
-def reject_request(username):
-    current_app.db.register_requests.delete_one({'username': username})
-    return jsonify({'success': True})
-
-
-@bp.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        info = request.form['info']
-
-        if current_app.db.register_requests.find_one({'username': username}):
-            flash('注册申请已存在')
-        else:
-            current_app.db.register_requests.insert_one({
-                'username': username,
-                'password': password,
-                'info': info,
-                'created_at': datetime.now()
-            })
-            flash('注册申请已提交')
-
-    return render_template('contact_admin.html')
-
-
 @socketio.on('connect')
 def handle_connect():
     if not current_user.is_authenticated:
         return False
+    messages = current_app.db.messages.find()
+    for message in messages:
+        if isinstance(message.get('message'), dict):
+            msg_data = message['message']
+            # 如果消息没有头像URL，尝试从用户数据获取
+            if 'avatar_url' not in msg_data:
+                user_data = current_app.db.users.find_one({'username': msg_data['username']})
+                if user_data and 'avatar_url' in user_data:
+                    msg_data['avatar_url'] = user_data['avatar_url']
+        else:
+            user_data = current_app.db.users.find_one({'username': current_user.username})
     messages = current_app.db.messages.find()
     for message in messages:
         if isinstance(message.get('message'), dict):
@@ -248,9 +202,16 @@ def handle_connect():
                 'timestamp': datetime.now().strftime('%H:%M')
             }
         emit('message', msg_data)
+                'text': message.get('message', ''),
+                'username': current_user.username,
+                'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
+                'timestamp': datetime.now().strftime('%H:%M')
+            }
+        emit('message', msg_data)
 
 
 @socketio.on('message')
+@login_required
 @login_required
 def handle_message(data):
     logger.info(f'Handling message from {current_user.username}: {data}')  # 添加日志
@@ -273,7 +234,9 @@ def handle_message(data):
         current_app.db.messages.insert_one({'message': message_data})
         emit('message', message_data, broadcast=True)
         logger.info(f'Message sent successfully: {message_id}')  # 添加日志
+        logger.info(f'Message sent successfully: {message_id}')  # 添加日志
     except Exception as e:
+        logger.error(f'Error sending message: {str(e)}')  # 添加错误日志
         logger.error(f'Error sending message: {str(e)}')  # 添加错误日志
 
 
@@ -751,14 +714,104 @@ def upload_emoji():
 
     return jsonify({'error': '不支持的文件类型'}), 400
 
-#服务器状态
-@bp.route('/server_status')
-def server_status():
-    cpu_usage = psutil.cpu_percent(interval=1)
-    memory_info = psutil.virtual_memory()
-    memory_usage = memory_info.percent
+@bp.route('/mobile')
+@login_required
+def mobile_chat():
+    return render_template('chat_mobile.html')
 
-    return jsonify({
-        'cpu_usage': cpu_usage,
-        'memory_usage': memory_usage
-    })
+@bp.route('/mobile/load_history')
+@login_required
+def load_history():
+    """加载历史消息的API"""
+    try:
+        # 获取所有消息并按时间戳排序
+        messages = list(current_app.db.messages.find().sort('timestamp', 1).limit(50))
+
+        formatted_messages = []
+        for msg in messages:
+            # 处理消息格式
+            if isinstance(msg.get('message'), dict):
+                # 如果是新格式消息
+                formatted_messages.append(msg)
+            else:
+                # 如果是旧格式消息，转换为新格式
+                formatted_messages.append({
+                    'id': str(msg['_id']),
+                    'message': {
+                        'text': msg.get('text', ''),
+                        'username': msg.get('username', ''),
+                        'timestamp': msg.get('timestamp', datetime.now()).strftime('%H:%M'),
+                        'avatar_url': msg.get('avatar_url', '')
+                    }
+                })
+
+        return jsonify(formatted_messages)
+    except Exception as e:
+        print(f"Error loading history: {e}")
+        return jsonify([])
+
+@bp.route('/api/server_status')
+@login_required
+def server_status():
+    """获取服务器状态信息的API"""
+    try:
+        import psutil
+        import time
+
+        # 获取CPU信息
+        cpu_percent = psutil.cpu_percent(interval=0.5)
+        cpu_cores = psutil.cpu_percent(interval=0.5, percpu=True)
+
+        # 获取内存信息
+        memory = psutil.virtual_memory()
+
+        # 获取硬盘信息
+        disk = psutil.disk_usage('/')
+
+        # 获取SWAP信息
+        swap = psutil.swap_memory()
+
+        # 获取IO信息
+        io_start = psutil.disk_io_counters()
+        time.sleep(0.1)
+        io_end = psutil.disk_io_counters()
+
+        read_bytes = io_end.read_bytes - io_start.read_bytes
+        write_bytes = io_end.write_bytes - io_start.write_bytes
+
+        # 计算IO速率 (MB/s)
+        read_mb = read_bytes / 1024 / 1024 / 0.1
+        write_mb = write_bytes / 1024 / 1024 / 0.1
+
+        # 计算IO使用率 (简单估算)
+        io_usage = min(100, (read_mb + write_mb) / 2)
+
+        return jsonify({
+            'cpu': {
+                'usage': round(cpu_percent, 1),
+                'cores': [{'id': i, 'usage': round(percent, 1)} for i, percent in enumerate(cpu_cores)]
+            },
+            'memory': {
+                'total': memory.total // (1024 * 1024),  # MB
+                'used': memory.used // (1024 * 1024),    # MB
+                'usage': memory.percent
+            },
+            'disk': {
+                'total': disk.total // (1024 * 1024 * 1024),  # GB
+                'used': disk.used // (1024 * 1024 * 1024),    # GB
+                'usage': disk.percent
+            },
+            'swap': {
+                'total': swap.total // (1024 * 1024),  # MB
+                'used': swap.used // (1024 * 1024),    # MB
+                'usage': swap.percent
+            },
+            'io': {
+                'read': round(read_mb, 2),
+                'write': round(write_mb, 2),
+                'usage': round(io_usage, 1)
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取服务器状态失败: {str(e)}")
+        return jsonify({'error': '获取服务器状态失败'}), 500

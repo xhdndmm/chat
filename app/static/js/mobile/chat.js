@@ -3,7 +3,7 @@ const socket = io();
 
 // 获取 DOM 元素
 const form = document.getElementById('message-form');
-const input = document.getElementById('message-input');
+const input = document.getElementById('input');
 const messages = document.getElementById('messages');
 const fileInput = document.getElementById('file-input');
 const emojiBtn = document.querySelector('.emoji-btn');
@@ -48,7 +48,7 @@ socket.on('reconnect', () => {
 function requestHistoryMessages() {
     console.log('Requesting history messages');
     messages.innerHTML = '';
-
+    
     fetch('/mobile/load_history')
         .then(response => response.json())
         .then(historyMessages => {
@@ -75,15 +75,15 @@ function requestHistoryMessages() {
 // 添加消息到界面
 function appendMessage(msgData) {
     console.log('Raw message data:', msgData);
-
+    
     // 处理文件类型消息
     if (msgData.type === 'file') {
-        const messageText = msgData.url.toLowerCase().endsWith('.mp4') ?
+        const messageText = msgData.url.toLowerCase().endsWith('.mp4') ? 
             `[video]${msgData.url}[/video]` :
             msgData.url.match(/\.(jpg|jpeg|png|gif)$/i) ?
             `[image]${msgData.url}[/image]` :
             `[file]${msgData.url}[/file]`;
-
+            
         msgData = {
             id: msgData.id,
             text: messageText,
@@ -92,19 +92,19 @@ function appendMessage(msgData) {
             avatar_url: msgData.avatar_url
         };
     }
-
+    
     // 确保消息格式一致
     const message = msgData;
     if (!message || typeof message.text === 'object') {
         message.text = message.text.text || '';
     }
-
+    
     console.log('Processed message:', message);
     console.log('Message text:', message.text);
-
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.username === window.CHAT_CONFIG.currentUser.username ? 'message-own' : 'message-other'}`;
-
+    
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
 
@@ -137,16 +137,16 @@ function appendMessage(msgData) {
         );
         // 设置消息内容的特殊类名
         contentDiv.className = 'message-content image-message';
-
+        
         const img = document.createElement('img');
         img.src = imageUrl;
         img.className = 'message-image';
-
+        
         // 添加图片加载事件
         img.onload = () => {
             messages.scrollTop = messages.scrollHeight;
         };
-
+        
         contentDiv.appendChild(img);
     } else if (typeof message.text === 'string' && message.text.includes('[video]') && message.text.includes('[/video]')) {
         // 处理视频消息
@@ -155,32 +155,32 @@ function appendMessage(msgData) {
             message.text.indexOf('[/video]')
         );
         console.log('Creating video element for URL:', videoUrl);
-
+        
         const videoContainer = document.createElement('div');
         videoContainer.className = 'message-video';
-
+        
         const video = document.createElement('video');
         video.controls = true;
         video.preload = 'metadata';
         video.playsInline = true;
         video.src = videoUrl;
-
+        
         videoContainer.appendChild(video);
         contentDiv.appendChild(videoContainer);
     } else {
         // 处理普通文本消息
         contentDiv.textContent = message.text;
     }
-
+    
     messageDiv.appendChild(contentDiv);
-
+    
     if (message.username && message.timestamp) {
         const metaDiv = document.createElement('div');
         metaDiv.className = 'message-meta';
         metaDiv.textContent = `${message.username} ${message.timestamp}`;
         messageDiv.appendChild(metaDiv);
     }
-
+    
     messages.appendChild(messageDiv);
     messages.scrollTop = messages.scrollHeight;
 }
@@ -189,7 +189,7 @@ function appendMessage(msgData) {
 form.addEventListener('submit', (e) => {
     e.preventDefault();
     const messageText = input.value.trim();
-
+    
     if (messageText) {
         console.log('Sending message:', messageText);
         // 修改消息格式，直接发送文本
@@ -292,8 +292,8 @@ document.addEventListener('click', function(event) {
     const sidebar = document.querySelector('.sidebar');
     const menuButton = document.querySelector('.nav-icon');
     const overlay = document.querySelector('.sidebar-overlay');
-
-    if (sidebar && !sidebar.contains(event.target) &&
+    
+    if (sidebar && !sidebar.contains(event.target) && 
         menuButton && !menuButton.contains(event.target)) {
         sidebar.classList.remove('open');
         document.body.style.overflow = '';
@@ -314,7 +314,7 @@ function switchPanel(type) {
     const emojiPanel = document.getElementById('emoji-panel');
     const stickerPanel = document.getElementById('sticker-panel');
     const tabs = document.querySelectorAll('.panel-tab');
-
+    
     // 更新标签状态
     tabs.forEach(tab => {
         if (tab.textContent.includes(type === 'emoji' ? '表情' : '贴纸')) {
@@ -323,7 +323,7 @@ function switchPanel(type) {
             tab.classList.remove('active');
         }
     });
-
+    
     if (type === 'emoji') {
         emojiPanel.querySelector('.emoji-grid').style.display = 'grid';
         stickerPanel.style.display = 'none';
@@ -344,11 +344,11 @@ function switchPanel(type) {
 // 修改初始化表情面板函数
 function initEmojiPanel(emojiBtn, emojiPanel, emojis, input) {
     let isAnimating = false;
-
+    
     // 添加点击事件监听器来关闭面板
     document.addEventListener('click', (e) => {
-        if (!emojiPanel.contains(e.target) &&
-            !document.getElementById('sticker-panel').contains(e.target) &&
+        if (!emojiPanel.contains(e.target) && 
+            !document.getElementById('sticker-panel').contains(e.target) && 
             !emojiBtn.contains(e.target)) {
             if (isAnimating) return;
             isAnimating = true;
@@ -366,11 +366,11 @@ function initEmojiPanel(emojiBtn, emojiPanel, emojis, input) {
         e.preventDefault();
         e.stopPropagation();
         if (isAnimating) return;
-
+        
         console.log('Emoji button clicked');
-
+        
         isAnimating = true;
-
+        
         if (emojiPanel.classList.contains('show') || stickerPanel.classList.contains('show')) {
             emojiPanel.classList.remove('show');
             stickerPanel.classList.remove('show');
@@ -391,7 +391,7 @@ function initEmojiPanel(emojiBtn, emojiPanel, emojis, input) {
             });
         }
     });
-
+    
     emojis.forEach(emoji => {
         emoji.addEventListener('click', function() {
             const emojiText = this.getAttribute('data-emoji');
@@ -420,26 +420,26 @@ function initEmojiPanel(emojiBtn, emojiPanel, emojis, input) {
 function showTab(tabId) {
     const tabs = document.querySelectorAll('.tab-content');
     const buttons = document.querySelectorAll('.tab-button');
-
+    
     // 隐藏所有标签页内容
     tabs.forEach(tab => {
         tab.classList.remove('active');
         tab.style.display = 'none';
     });
-
+    
     // 移除所有按钮的激活状态
     buttons.forEach(button => {
         button.classList.remove('active');
     });
-
+    
     // 显示选中的标签页
     const selectedTab = document.getElementById(tabId);
     selectedTab.classList.add('active');
     selectedTab.style.display = 'flex';
-
+    
     // 激活对应的按钮
     document.querySelector(`[onclick*="${tabId}"]`).classList.add('active');
-
+    
     // 如果是贴纸标签页，加载贴纸
     if (tabId === 'stickers-tab') {
         loadStickers();
@@ -454,12 +454,12 @@ async function loadStickers() {
     try {
         const response = await fetch('/get_sticker_packs');
         const packs = await response.json();
-
+        
         container.innerHTML = '';
-
+        
         // 处理单个贴纸（没有包名的贴纸）
         const singleStickers = [];
-
+        
         packs.forEach(pack => {
             if (typeof pack === 'string') {
                 singleStickers.push(pack);
@@ -475,21 +475,21 @@ async function loadStickers() {
             const packDiv = document.createElement('div');
             packDiv.className = 'sticker-pack';
             packDiv.setAttribute('data-pack-name', '未分组贴纸');
-
+            
             const header = document.createElement('div');
             header.className = 'pack-header';
             header.innerHTML = `<span class="pack-name">未分组贴纸</span>`;
-
+            
             const grid = document.createElement('div');
             grid.className = 'sticker-grid';
-
+            
             singleStickers.forEach(url => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'sticker-wrapper';
-
+                
                 const fileExt = url.split('.').pop().toLowerCase();
                 let element;
-
+                
                 if (fileExt === 'webm') {
                     element = document.createElement('video');
                     element.src = url;
@@ -503,9 +503,9 @@ async function loadStickers() {
                     element.src = url;
                     element.className = 'sticker-image';
                 }
-
+                
                 element.onclick = () => insertSticker(url);
-
+                
                 // 添加删除按钮 - 所有用户都可以删除
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'sticker-delete-btn';
@@ -517,11 +517,11 @@ async function loadStickers() {
                     }
                 };
                 wrapper.appendChild(deleteBtn);
-
+                
                 wrapper.appendChild(element);
                 grid.appendChild(wrapper);
             });
-
+            
             packDiv.appendChild(header);
             packDiv.appendChild(grid);
             container.appendChild(packDiv);
@@ -532,7 +532,7 @@ async function loadStickers() {
             const packDiv = document.createElement('div');
             packDiv.className = 'sticker-pack';
             packDiv.setAttribute('data-pack-name', pack.name);
-
+            
             const header = document.createElement('div');
             header.className = 'pack-header';
             header.innerHTML = `
@@ -543,17 +543,17 @@ async function loadStickers() {
                     </svg>
                 </button>
             `;
-
+            
             const grid = document.createElement('div');
             grid.className = 'sticker-grid';
-
+            
             pack.stickers.forEach(url => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'sticker-wrapper';
-
+                
                 const fileExt = url.split('.').pop().toLowerCase();
                 let element;
-
+                
                 if (fileExt === 'webm') {
                     element = document.createElement('video');
                     element.src = url;
@@ -567,10 +567,10 @@ async function loadStickers() {
                     element.src = url;
                     element.className = 'sticker-image';
                 }
-
+                
                 element.onclick = () => insertSticker(url);
-
-                // 添加删除按钮 - 所有用户都可以删除
+                
+                // 添加删除按钮 - 所有用户都可以删���
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'sticker-delete-btn';
                 deleteBtn.innerHTML = '×';
@@ -581,15 +581,15 @@ async function loadStickers() {
                     }
                 };
                 wrapper.appendChild(deleteBtn);
-
+                
                 wrapper.appendChild(element);
                 grid.appendChild(wrapper);
             });
-
+            
             packDiv.appendChild(header);
             packDiv.appendChild(grid);
             container.appendChild(packDiv);
-
+            
             const videos = packDiv.querySelectorAll('video');
             videos.forEach(video => {
                 video.play().catch(e => console.log('视频自动播放失败:', e));
@@ -604,7 +604,7 @@ async function loadStickers() {
 // 插入贴纸
 function insertSticker(url) {
     socket.emit('message', `[sticker]${url}[/sticker]`);
-
+    
     // 关闭表情面板和贴纸面板
     const emojiPanel = document.getElementById('emoji-panel');
     const stickerPanel = document.getElementById('sticker-panel');
@@ -640,7 +640,7 @@ function uploadStickerPack(input) {
         const formData = new FormData();
         formData.append('sticker_pack', input.files[0]);
         formData.append('pack_name', packName);
-
+        
         fetch('/upload_sticker_pack', {
             method: 'POST',
             body: formData
@@ -667,7 +667,7 @@ function uploadSticker(input) {
     if (input.files && input.files[0]) {
         const formData = new FormData();
         formData.append('sticker', input.files[0]);
-
+        
         fetch('/upload_sticker', {
             method: 'POST',
             body: formData
