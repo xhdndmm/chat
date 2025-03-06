@@ -1,0 +1,39 @@
+name: Deploy to ECS
+
+on:
+    push:
+        branches:
+            - main # 触发部署的分支
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up SSH
+              uses: webfactory/ssh-agent@v0.9.0
+              with:
+                  ssh-private-key: ${{ secrets.ECS_SSH_KEY }}
+
+            - name: Deploy to ECS
+              env:
+                  ECS_HOST: ${{ secrets.ECS_HOST }}
+                  ECS_USER: ${{ secrets.ECS_USER }}
+                  ECS_SSH_PORT: ${{ secrets.ECS_SSH_PORT }}
+                  DOCKER_COMPOSE_FILE_PATH: ${{ secrets.DOCKER_COMPOSE_FILE_PATH }}
+              run: |
+                  echo "Deploying application to ECS..."
+                  echo "ECS_HOST:" $ECS_HOST
+                  echo "ECS_USER:" $ECS_USER
+                  echo "ECS_SSH_PORT:" $ECS_SSH_PORT
+                  echo "DOCKER_COMPOSE_FILE_PATH:" $DOCKER_COMPOSE_FILE_PATH
+                  ssh -o StrictHostKeyChecking=no -p $ECS_SSH_PORT $ECS_USER@$ECS_HOST "
+                    cd $(dirname $DOCKER_COMPOSE_FILE_PATH) &&
+                    docker compose -f $DOCKER_COMPOSE_FILE_PATH down &&
+                    git pull &&
+                    docker compose -f $DOCKER_COMPOSE_FILE_PATH build &&
+                    docker compose -f $DOCKER_COMPOSE_FILE_PATH up -d
+                  "
