@@ -201,13 +201,7 @@ def handle_connect():
                 'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
                 'timestamp': datetime.now().strftime('%H:%M')
             }
-        emit('message', msg_data)
-                'text': message.get('message', ''),
-                'username': current_user.username,
-                'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
-                'timestamp': datetime.now().strftime('%H:%M')
-            }
-        emit('message', msg_data)
+            emit('message', msg_data)
 
 
 @socketio.on('message')
@@ -706,8 +700,9 @@ def upload_emoji():
 
     if allowed_file(file.filename):  # 确保您有一个函数来检查文件类型
         filename = secure_filename(file.filename)
-        emoji_path = os.path.join(EMOJI_FOLDER, filename)  # 确保您定义了 EMOJI_FOLDER
-        file.save(emoji_path)
+        # TODO
+        # emoji_path = os.path.join(EMOJI_FOLDER, filename)  # 确保您定义了 EMOJI_FOLDER
+        # file.save(emoji_path)
 
         # 这里可以将表情信息保存到数据库，或者直接返回成功信息
         return jsonify({'success': True, 'url': url_for('static', filename=f'emojis/{filename}')})
