@@ -752,35 +752,31 @@ def server_status():
     try:
         import psutil
         import time
-
+        
         # 获取CPU信息
         cpu_percent = psutil.cpu_percent(interval=0.5)
         cpu_cores = psutil.cpu_percent(interval=0.5, percpu=True)
-
+        
         # 获取内存信息
         memory = psutil.virtual_memory()
-
+        
         # 获取硬盘信息
         disk = psutil.disk_usage('/')
-
+        
         # 获取SWAP信息
         swap = psutil.swap_memory()
-
-        # 获取IO信息
-        io_start = psutil.disk_io_counters()
+        
+        # 获取网络信息
+        net_start = psutil.net_io_counters()
         time.sleep(0.1)
-        io_end = psutil.disk_io_counters()
-
-        read_bytes = io_end.read_bytes - io_start.read_bytes
-        write_bytes = io_end.write_bytes - io_start.write_bytes
-
-        # 计算IO速率 (MB/s)
-        read_mb = read_bytes / 1024 / 1024 / 0.1
-        write_mb = write_bytes / 1024 / 1024 / 0.1
-
-        # 计算IO使用率 (简单估算)
-        io_usage = min(100, (read_mb + write_mb) / 2)
-
+        net_end = psutil.net_io_counters()
+        
+        # 计算网络速率 (MB/s)
+        bytes_sent = net_end.bytes_sent - net_start.bytes_sent
+        bytes_recv = net_end.bytes_recv - net_start.bytes_recv
+        sent_mb = bytes_sent / 1024 / 1024 / 0.1
+        recv_mb = bytes_recv / 1024 / 1024 / 0.1
+        
         return jsonify({
             'cpu': {
                 'usage': round(cpu_percent, 1),
@@ -801,10 +797,9 @@ def server_status():
                 'used': swap.used // (1024 * 1024),    # MB
                 'usage': swap.percent
             },
-            'io': {
-                'read': round(read_mb, 2),
-                'write': round(write_mb, 2),
-                'usage': round(io_usage, 1)
+            'network': {
+                'sent': round(sent_mb, 2),
+                'received': round(recv_mb, 2)
             }
         })
     except Exception as e:
