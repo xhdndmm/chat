@@ -398,7 +398,8 @@ function appendMessage(msgData) {
     } else if (msgData.type === 'file') {
         handleFileMessage(msgData, contentDiv);
     } else {
-        contentDiv.textContent = msgData.text;
+        // 处理普通文本消息，将URL转换为链接
+        contentDiv.appendChild(convertUrlsToLinks(msgData.text));
     }
     
     contentWrapper.appendChild(contentDiv);
@@ -1076,4 +1077,60 @@ function showImagePreview(url) {
         }
     };
     document.addEventListener('keydown', escHandler);
+}
+
+// 将文本中的URL转换为可点击的链接
+function convertUrlsToLinks(text) {
+    if (!text) return '';
+    
+    // 匹配URL模式：http://, https://, www.开头的链接，以及常见域名后缀和IP地址
+    const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([^\s]+\.(com|org|net|edu|gov|io|co|cn|me|app|dev|xyz|info)[^\s]*)|(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?)|(\[[\da-fA-F:]+\](:\d+)?)/g;
+    
+    // 创建一个临时的div元素
+    const tempDiv = document.createElement('div');
+    
+    // 将文本按URL分割并处理
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = urlRegex.exec(text)) !== null) {
+        // 添加URL前的文本
+        if (match.index > lastIndex) {
+            tempDiv.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+        }
+        
+        // 创建链接元素
+        const link = document.createElement('a');
+        let url = match[0];
+        
+        // 确保链接有正确的协议前缀
+        if (url.startsWith('www.')) {
+            url = 'http://' + url;
+        } else if (url.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/)) {
+            // 对于纯IP地址，添加http://前缀
+            url = 'http://' + url;
+        } else if (url.startsWith('[') && url.includes(']')) {
+            // 对于IPv6地址，添加http://前缀
+            url = 'http://' + url;
+        } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            // 对于域名后缀但没有协议的情况
+            url = 'http://' + url;
+        }
+        
+        link.href = url;
+        link.textContent = match[0];
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'auto-link';
+        
+        tempDiv.appendChild(link);
+        lastIndex = match.index + match[0].length;
+    }
+    
+    // 添加剩余的文本
+    if (lastIndex < text.length) {
+        tempDiv.appendChild(document.createTextNode(text.substring(lastIndex)));
+    }
+    
+    return tempDiv;
 }

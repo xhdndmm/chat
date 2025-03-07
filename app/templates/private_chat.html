@@ -377,7 +377,7 @@
                 <div class="message {% if msg.sender == current_user.username %}self{% endif %}" data-id="{{ msg.id }}">
                     <img class="message-avatar" src="{{ target_user.avatar_url if msg.sender != current_user.username else current_user_data.avatar_url }}" alt="{{ msg.sender }}">
                     <div class="message-content">
-                        <div class="message-text">{{ msg.content }}</div>
+                        <div class="message-text" id="message-{{ msg.id }}">{{ msg.content }}</div>
                         <div class="message-time">
                             {{ msg.timestamp }}
                             {% if msg.edited %}
@@ -504,6 +504,54 @@
                 }
             });
             
+            // 将文本中的URL转换为可点击的链接
+            function convertUrlsToLinks(text) {
+                if (!text) return '';
+                
+                // 匹配URL模式：http://, https://, www.开头的链接，以及常见域名后缀和IP地址
+                const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([^\s]+\.(com|org|net|edu|gov|io|co|cn|me|app|dev|xyz|info)[^\s]*)|(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?)|(\[[\da-fA-F:]+\](:\d+)?)/g;
+                
+                // 将文本按URL分割并处理
+                let result = '';
+                let lastIndex = 0;
+                let match;
+                
+                while ((match = urlRegex.exec(text)) !== null) {
+                    // 添加URL前的文本
+                    if (match.index > lastIndex) {
+                        result += text.substring(lastIndex, match.index);
+                    }
+                    
+                    // 创建链接元素
+                    let url = match[0];
+                    
+                    // 确保链接有正确的协议前缀
+                    let href = url;
+                    if (url.startsWith('www.')) {
+                        href = 'http://' + url;
+                    } else if (url.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/)) {
+                        // 对于纯IP地址，添加http://前缀
+                        href = 'http://' + url;
+                    } else if (url.startsWith('[') && url.includes(']')) {
+                        // 对于IPv6地址，添加http://前缀
+                        href = 'http://' + url;
+                    } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        // 对于域名后缀但没有协议的情况
+                        href = 'http://' + url;
+                    }
+                    
+                    result += `<a href="${href}" target="_blank" rel="noopener noreferrer" class="auto-link">${url}</a>`;
+                    lastIndex = match.index + match[0].length;
+                }
+                
+                // 添加剩余的文本
+                if (lastIndex < text.length) {
+                    result += text.substring(lastIndex);
+                }
+                
+                return result;
+            }
+            
             // 接收私聊消息
             socket.on('private_message', function(data) {
                 // 只处理与当前聊天相关的消息
@@ -515,10 +563,13 @@
                     
                     const avatarSrc = isSelf ? '{{ current_user_data.avatar_url }}' : '{{ target_user.avatar_url }}';
                     
+                    // 处理消息内容，将URL转换为链接
+                    const processedContent = convertUrlsToLinks(data.content);
+                    
                     messageElement.innerHTML = `
                         <img class="message-avatar" src="${avatarSrc}" alt="${data.sender}">
                         <div class="message-content">
-                            <div class="message-text">${data.content}</div>
+                            <div class="message-text">${processedContent}</div>
                             <div class="message-time">
                                 ${data.timestamp}
                                 ${isSelf ? '<span class="message-status">未读</span>' : ''}
@@ -546,7 +597,8 @@
                 const messageElement = document.querySelector(`.message[data-id="${data.id}"]`);
                 if (messageElement) {
                     const messageText = messageElement.querySelector('.message-content .message-text');
-                    messageText.textContent = data.content;
+                    // 处理消息内容，将URL转换为链接
+                    messageText.innerHTML = convertUrlsToLinks(data.content);
                     
                     const messageTime = messageElement.querySelector('.message-content .message-time');
                     if (!messageTime.innerHTML.includes('(已编辑)')) {
@@ -772,6 +824,18 @@
                         }
                     }
                 }
+            });
+
+            // 页面加载完成后处理已有消息中的URL
+            document.addEventListener('DOMContentLoaded', function() {
+                // 处理所有已加载的消息
+                const messageElements = document.querySelectorAll('.message-text');
+                messageElements.forEach(element => {
+                    if (element.id && element.id.startsWith('message-')) {
+                        const originalText = element.textContent;
+                        element.innerHTML = convertUrlsToLinks(originalText);
+                    }
+                });
             });
         });
     </script>

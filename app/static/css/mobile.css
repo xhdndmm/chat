@@ -651,3 +651,14 @@
     background: rgba(0, 206, 209, 0.1);
     color: #00CED1;
 }
+
+/* 自动链接样式 */
+.auto-link {
+    color: #1a73e8;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.auto-link:hover {
+    text-decoration: underline;
+}
