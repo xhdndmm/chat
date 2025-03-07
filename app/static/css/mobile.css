@@ -696,3 +696,35 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 168, 132, 0.15);
 }
+
+/* 在线人数显示样式 */
+.online-users-container {
+    margin: 8px 10px;
+}
+
+.online-users-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.05), rgba(33, 150, 243, 0.15));
+    border: 1px solid rgba(33, 150, 243, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #444;
+}
+
+.online-users-badge svg {
+    width: 18px;
+    height: 18px;
+    fill: #2196F3;
+}
+
+.online-users-badge span {
+    font-weight: 600;
+    color: #2196F3;
+}
+
+.online-users-badge:active {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(33, 150, 243, 0.2));
+}

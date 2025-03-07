@@ -397,6 +397,13 @@ def handle_connect():
         # 发送在线状态给所有用户
         emit('user_online', {'username': current_user.username}, broadcast=True)
         
+        # 计算在线用户数量（去重）
+        online_users = set(connected_users.values())
+        online_count = len(online_users)
+        
+        # 广播在线人数
+        emit('online_users_count', {'count': online_count}, broadcast=True)
+        
         # 获取未读私信数量
         from app.models import PrivateMessage
         unread_count = PrivateMessage.get_unread_count(current_app.db, current_user.username)
