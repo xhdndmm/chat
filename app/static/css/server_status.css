@@ -13,6 +13,20 @@
     margin: 0 0 10px 0;
     font-size: 16px;
     color: #333;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.server-status-user h4::before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3E%3Cpath d='M4 22h16a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-7V3a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1zm7-18v3H5V4h6zM5 10h6v2H5v-2zm0 4h6v2H5v-2zm0 4h6v2H5v-2zm8 2v-2h6v2h-6zm6-4h-6v-2h6v2zm0-4h-6v-2h6v2z'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
 }
 
 /* 错误消息样式 */
@@ -94,7 +108,9 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 400px;
+    width: 350px;
+    max-width: 90vw;
+    max-height: 80vh;
     background-color: #f0f0f0;
     border: 1px solid #ccc;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -286,4 +302,44 @@
 
 .status-body::-webkit-scrollbar-thumb:hover {
     background: #555;
+}
+
+/* 小屏幕设备的响应式设计 */
+@media (max-width: 768px) {
+    .server-status-admin {
+        width: 280px;
+        bottom: 10px;
+        right: 10px;
+    }
+    
+    .server-status-admin.maximized {
+        width: 95vw;
+        height: 80vh;
+    }
+    
+    .status-metrics {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .chart-container {
+        height: 150px;
+    }
+    
+    .status-section {
+        padding: 8px;
+        margin-bottom: 10px;
+    }
+}
+
+/* 默认最小化状态（小分辨率设备） */
+@media (max-width: 480px) {
+    .server-status-admin {
+        width: 120px;
+        height: 60px;
+    }
+    
+    .server-status-admin:not(.minimized):not(.maximized) .status-body {
+        display: none;
+    }
 } 

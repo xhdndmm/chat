@@ -268,7 +268,7 @@ body {
     display: flex;
     flex-direction: column;
     background-color: var(--chat-bg);
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm60 91c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-35-63c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-23-31c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-29-60c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%23e5e5e5' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5z-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm60 91c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-35-63c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-23-31c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-29-60c1.105 0 2-1.343 2-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%23e5e5e5' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
 }
 
 .chat-header {
@@ -942,6 +942,77 @@ body {
     background: rgba(0, 168, 132, 0.1);
     transform: translateX(4px);
     color: var(--primary-color);
+}
+
+/* 源码仓库链接样式 */
+.repo-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    text-decoration: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    background: linear-gradient(135deg, rgba(0, 168, 132, 0.05), rgba(0, 168, 132, 0.15));
+    border: 1px solid rgba(0, 168, 132, 0.2);
+    margin-top: 8px;
+}
+
+.repo-link svg {
+    width: 18px;
+    height: 18px;
+    stroke: var(--primary-color);
+    stroke-width: 1.5;
+    fill: none;
+}
+
+.repo-link span {
+    font-weight: 500;
+    color: #444;
+}
+
+.repo-link:hover {
+    background: linear-gradient(135deg, rgba(0, 168, 132, 0.1), rgba(0, 168, 132, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 168, 132, 0.15);
+}
+
+/* 在线人数显示样式 */
+.online-users-container {
+    margin: 10px 0;
+    padding: 0 12px;
+}
+
+.online-users-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.05), rgba(33, 150, 243, 0.15));
+    border: 1px solid rgba(33, 150, 243, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #444;
+    transition: all 0.3s ease;
+}
+
+.online-users-badge svg {
+    width: 18px;
+    height: 18px;
+    fill: #2196F3;
+}
+
+.online-users-badge span {
+    font-weight: 600;
+    color: #2196F3;
+}
+
+.online-users-badge:hover {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(33, 150, 243, 0.2));
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(33, 150, 243, 0.15);
 }
 
 /* 用户信息弹窗样式 */

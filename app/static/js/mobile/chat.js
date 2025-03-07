@@ -33,6 +33,16 @@ socket.on('message', (data) => {
     appendMessage(data);
 });
 
+// 处理在线人数更新
+socket.on('online_users_count', (data) => {
+    console.log('Online users count:', data.count);
+    // 更新移动版在线人数显示
+    const onlineUsersCountMobile = document.getElementById('online-users-count-mobile');
+    if (onlineUsersCountMobile) {
+        onlineUsersCountMobile.textContent = data.count;
+    }
+});
+
 // 添加重连逻辑
 socket.on('disconnect', () => {
     console.log('Socket disconnected');

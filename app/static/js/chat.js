@@ -152,6 +152,22 @@ function initSocketEvents(socket) {
         appendMessage(msgData);
     });
     
+    // 处理在线人数更新
+    socket.on('online_users_count', (data) => {
+        console.log('Online users count:', data.count);
+        // 更新PC版在线人数显示
+        const onlineUsersCount = document.getElementById('online-users-count');
+        if (onlineUsersCount) {
+            onlineUsersCount.textContent = data.count;
+        }
+        
+        // 更新移动版在线人数显示
+        const onlineUsersCountMobile = document.getElementById('online-users-count-mobile');
+        if (onlineUsersCountMobile) {
+            onlineUsersCountMobile.textContent = data.count;
+        }
+    });
+    
     socket.on('message', (msgData) => {
         console.log('Received message:', msgData);
         // 如果是自己发送的消息，标记为已读

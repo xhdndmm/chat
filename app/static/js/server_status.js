@@ -393,6 +393,12 @@ function createUserView() {
 function createAdminView() {
     const adminView = document.createElement('div');
     adminView.className = 'server-status-admin';
+    
+    // 在小屏幕设备上默认最小化
+    if (window.innerWidth <= 480) {
+        adminView.classList.add('minimized');
+    }
+    
     adminView.innerHTML = `
         <div class="status-header">
             <h4>服务器状态监控</h4>
