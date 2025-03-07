@@ -662,3 +662,37 @@
 .auto-link:hover {
     text-decoration: underline;
 }
+
+/* 源码仓库链接样式 */
+.repo-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 20px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+    margin: 10px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(0, 168, 132, 0.05), rgba(0, 168, 132, 0.15));
+    border: 1px solid rgba(0, 168, 132, 0.2);
+}
+
+.repo-link svg {
+    width: 20px;
+    height: 20px;
+    stroke: #00a884;
+    stroke-width: 1.5;
+    fill: none;
+}
+
+.repo-link span {
+    font-weight: 500;
+    color: #444;
+}
+
+.repo-link:hover {
+    background: linear-gradient(135deg, rgba(0, 168, 132, 0.1), rgba(0, 168, 132, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 168, 132, 0.15);
+}
