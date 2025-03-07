@@ -944,6 +944,41 @@ body {
     color: var(--primary-color);
 }
 
+/* 源码仓库链接样式 */
+.repo-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    text-decoration: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    background: linear-gradient(135deg, rgba(0, 168, 132, 0.05), rgba(0, 168, 132, 0.15));
+    border: 1px solid rgba(0, 168, 132, 0.2);
+    margin-top: 8px;
+}
+
+.repo-link svg {
+    width: 18px;
+    height: 18px;
+    stroke: var(--primary-color);
+    stroke-width: 1.5;
+    fill: none;
+}
+
+.repo-link span {
+    font-weight: 500;
+    color: #444;
+}
+
+.repo-link:hover {
+    background: linear-gradient(135deg, rgba(0, 168, 132, 0.1), rgba(0, 168, 132, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 168, 132, 0.15);
+}
+
 /* 用户信息弹窗样式 */
 .modal {
     display: none;
