@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>私聊 - {{ target_user.username }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+    <style>
+        /* 私聊页面样式 */
+        .chat-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background-color: #f5f5f5;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .chat-item:hover {
+            background-color: #e9e9e9;
+        }
+        
+        .chat-item.active {
+            background-color: #e0e0e0;
+        }
+        
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .chat-info {
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .chat-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .chat-preview {
+            font-size: 0.8em;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .chat-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            min-width: 50px;
+        }
+        
+        .chat-time {
+            font-size: 0.7em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+        
+        .unread-badge {
+            background-color: #ff4757;
+            color: white;
+            border-radius: 50%;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            padding: 0 4px;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            background-color: #f9f9f9;
+        }
+        
+        .header-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .header-info h2 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        
+        .header-status {
+            font-size: 0.8em;
+            color: #666;
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f0f2f5;
+        }
+        
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+            max-width: 70%;
+        }
+        
+        .message.self {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+        
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin: 0 10px;
+        }
+        
+        .message-content {
+            background-color: white;
+            padding: 10px 15px;
+            border-radius: 18px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .message.self .message-content {
+            background-color: #dcf8c6;
+        }
+        
+        .message-text {
+            word-wrap: break-word;
+        }
+        
+        .message-time {
+            font-size: 0.7em;
+            color: #999;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .message-status {
+            font-size: 0.7em;
+            color: #999;
+            margin-left: 5px;
+        }
+        
+        .input-container {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            background-color: white;
+        }
+        
+        .message-input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 10px 15px;
+            outline: none;
+            resize: none;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .send-button {
+            margin-left: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .send-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .new-chat-button {
+            margin: 10px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+        }
+        
+        /* 用户选择模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 50%;
+            max-width: 500px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+        }
+        
+        .close-modal {
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+        
+        .user-search {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .user-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .user-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .user-name {
+            font-weight: bold;
+        }
+        
+        /* 消息操作菜单 */
+        .message-menu {
+            position: absolute;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 100;
+        }
+        
+        .message-menu-item {
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        
+        .message-menu-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* 返回按钮 */
+        .back-button {
+            margin-right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <!-- 侧边栏 - 聊天列表 -->
+        <div class="sidebar">
+            <div class="new-chat-button" id="newChatButton">新建私聊</div>
+            <div class="chat-list" id="chatList">
+                {% for conv in recent_conversations %}
+                <div class="chat-item {% if conv.username == target_user.username %}active{% endif %}" data-username="{{ conv.username }}">
+                    <img class="chat-avatar" src="{{ conv.avatar_url }}" alt="{{ conv.username }}">
+                    <div class="chat-info">
+                        <div class="chat-name">{{ conv.username }}</div>
+                        <div class="chat-preview">{{ conv.last_message }}</div>
+                    </div>
+                    <div class="chat-meta">
+                        <div class="chat-time">{{ conv.last_message_time }}</div>
+                        {% if conv.unread_count > 0 %}
+                        <div class="unread-badge">{{ conv.unread_count }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 主内容区 - 聊天界面 -->
+        <div class="main-content">
+            <!-- 聊天头部 -->
+            <div class="chat-header">
+                <button class="back-button" id="backButton">←</button>
+                <img class="header-avatar" src="{{ target_user.avatar_url }}" alt="{{ target_user.username }}">
+                <div class="header-info">
+                    <h2>{{ target_user.username }}</h2>
+                    <div class="header-status" id="userStatus">离线</div>
+                </div>
+            </div>
+            
+            <!-- 消息区域 -->
+            <div class="messages-container" id="messagesContainer">
+                {% for msg in messages %}
+                <div class="message {% if msg.sender == current_user.username %}self{% endif %}" data-id="{{ msg.id }}">
+                    <img class="message-avatar" src="{{ target_user.avatar_url if msg.sender != current_user.username else current_user_data.avatar_url }}" alt="{{ msg.sender }}">
+                    <div class="message-content">
+                        <div class="message-text">{{ msg.content }}</div>
+                        <div class="message-time">
+                            {{ msg.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% if msg.edited %}
+                            <span class="message-status">(已编辑)</span>
+                            {% endif %}
+                            {% if msg.sender == current_user.username %}
+                            <span class="message-status">{{ '已读' if msg.read else '未读' }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- 输入区域 -->
+            <div class="input-container">
+                <textarea class="message-input" id="messageInput" placeholder="输入消息..." rows="1"></textarea>
+                <button class="send-button" id="sendButton" disabled>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="white"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 消息操作菜单 -->
+    <div class="message-menu" id="messageMenu">
+        <div class="message-menu-item" id="editMessage">编辑消息</div>
+        <div class="message-menu-item" id="deleteMessage">删除消息</div>
+    </div>
+    
+    <!-- 用户选择模态框 -->
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>选择聊天对象</h3>
+                <span class="close-modal" id="closeModal">&times;</span>
+            </div>
+            <input type="text" class="user-search" id="userSearch" placeholder="搜索用户...">
+            <div class="user-list" id="userList">
+                {% for user in all_users %}
+                {% if user.username != current_user.username %}
+                <div class="user-item" data-username="{{ user.username }}">
+                    <img class="user-avatar" src="{{ user.avatar_url }}" alt="{{ user.username }}">
+                    <div class="user-name">{{ user.username }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const messagesContainer = document.getElementById('messagesContainer');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const chatList = document.getElementById('chatList');
+            const newChatButton = document.getElementById('newChatButton');
+            const userModal = document.getElementById('userModal');
+            const closeModal = document.getElementById('closeModal');
+            const userSearch = document.getElementById('userSearch');
+            const userList = document.getElementById('userList');
+            const messageMenu = document.getElementById('messageMenu');
+            const editMessageButton = document.getElementById('editMessage');
+            const deleteMessageButton = document.getElementById('deleteMessage');
+            const backButton = document.getElementById('backButton');
+            const userStatus = document.getElementById('userStatus');
+            
+            // 当前聊天对象
+            const currentReceiver = '{{ target_user.username }}';
+            
+            // 当前选中的消息
+            let selectedMessage = null;
+            
+            // 连接Socket.IO
+            const socket = io();
+            
+            // 滚动到底部
+            function scrollToBottom() {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            // 初始化时滚动到底部
+            scrollToBottom();
+            
+            // 启用/禁用发送按钮
+            messageInput.addEventListener('input', function() {
+                sendButton.disabled = messageInput.value.trim() === '';
+                
+                // 自动调整高度
+                messageInput.style.height = 'auto';
+                messageInput.style.height = (messageInput.scrollHeight > 100 ? 100 : messageInput.scrollHeight) + 'px';
+            });
+            
+            // 发送消息
+            function sendMessage() {
+                const content = messageInput.value.trim();
+                if (content === '') return;
+                
+                socket.emit('private_message', {
+                    receiver: currentReceiver,
+                    content: content,
+                    type: 'text'
+                });
+                
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                sendButton.disabled = true;
+            }
+            
+            // 点击发送按钮
+            sendButton.addEventListener('click', sendMessage);
+            
+            // 按Enter键发送消息
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendButton.disabled) {
+                        sendMessage();
+                    }
+                }
+            });
+            
+            // 接收私聊消息
+            socket.on('private_message', function(data) {
+                // 只处理与当前聊天相关的消息
+                if (data.sender === currentReceiver || data.receiver === currentReceiver) {
+                    const isSelf = data.sender === '{{ current_user.username }}';
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message ${isSelf ? 'self' : ''}`;
+                    messageElement.dataset.id = data.id;
+                    
+                    const avatarSrc = isSelf ? '{{ current_user_data.avatar_url }}' : '{{ target_user.avatar_url }}';
+                    
+                    messageElement.innerHTML = `
+                        <img class="message-avatar" src="${avatarSrc}" alt="${data.sender}">
+                        <div class="message-content">
+                            <div class="message-text">${data.content}</div>
+                            <div class="message-time">
+                                ${data.timestamp}
+                                ${isSelf ? '<span class="message-status">未读</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    messagesContainer.appendChild(messageElement);
+                    scrollToBottom();
+                    
+                    // 如果是接收到的消息，标记为已读
+                    if (!isSelf) {
+                        socket.emit('mark_messages_read', {
+                            message_ids: [data.id]
+                        });
+                    }
+                }
+                
+                // 更新聊天列表
+                updateChatList();
+            });
+            
+            // 更新消息状态
+            socket.on('private_message_updated', function(data) {
+                const messageElement = document.querySelector(`.message[data-id="${data.id}"]`);
+                if (messageElement) {
+                    const messageText = messageElement.querySelector('.message-content .message-text');
+                    messageText.textContent = data.content;
+                    
+                    const messageTime = messageElement.querySelector('.message-content .message-time');
+                    if (!messageTime.innerHTML.includes('(已编辑)')) {
+                        messageTime.innerHTML = messageTime.innerHTML + ' <span class="message-status">(已编辑)</span>';
+                    }
+                }
+            });
+            
+            // 删除消息
+            socket.on('private_message_deleted', function(data) {
+                const messageElement = document.querySelector(`.message[data-id="${data.id}"]`);
+                if (messageElement) {
+                    messageElement.remove();
+                }
+            });
+            
+            // 用户在线状态
+            socket.on('user_online', function(data) {
+                if (data.username === currentReceiver) {
+                    userStatus.textContent = '在线';
+                }
+            });
+            
+            socket.on('user_offline', function(data) {
+                if (data.username === currentReceiver) {
+                    userStatus.textContent = '离线';
+                }
+            });
+            
+            // 未读消息通知
+            socket.on('unread_notification', function(data) {
+                updateChatList();
+            });
+            
+            // 右键点击消息显示操作菜单
+            messagesContainer.addEventListener('contextmenu', function(e) {
+                const messageElement = e.target.closest('.message');
+                if (messageElement && messageElement.classList.contains('self')) {
+                    e.preventDefault();
+                    selectedMessage = messageElement;
+                    
+                    // 显示菜单在鼠标位置
+                    messageMenu.style.display = 'block';
+                    messageMenu.style.left = e.pageX + 'px';
+                    messageMenu.style.top = e.pageY + 'px';
+                }
+            });
+            
+            // 点击其他地方关闭菜单
+            document.addEventListener('click', function() {
+                messageMenu.style.display = 'none';
+            });
+            
+            // 编辑消息
+            editMessageButton.addEventListener('click', function() {
+                if (selectedMessage) {
+                    const messageId = selectedMessage.dataset.id;
+                    const messageText = selectedMessage.querySelector('.message-text').textContent;
+                    
+                    const newContent = prompt('编辑消息:', messageText);
+                    if (newContent !== null && newContent.trim() !== '' && newContent !== messageText) {
+                        socket.emit('edit_private_message', {
+                            message_id: messageId,
+                            content: newContent
+                        });
+                    }
+                }
+            });
+            
+            // 删除消息
+            deleteMessageButton.addEventListener('click', function() {
+                if (selectedMessage) {
+                    const messageId = selectedMessage.dataset.id;
+                    
+                    if (confirm('确定要删除这条消息吗？')) {
+                        socket.emit('delete_private_message', {
+                            message_id: messageId
+                        });
+                    }
+                }
+            });
+            
+            // 点击聊天列表项切换聊天
+            chatList.addEventListener('click', function(e) {
+                const chatItem = e.target.closest('.chat-item');
+                if (chatItem) {
+                    const username = chatItem.dataset.username;
+                    if (username !== currentReceiver) {
+                        window.location.href = `/private_chat/${username}`;
+                    }
+                }
+            });
+            
+            // 新建私聊
+            newChatButton.addEventListener('click', function() {
+                userModal.style.display = 'block';
+            });
+            
+            // 关闭模态框
+            closeModal.addEventListener('click', function() {
+                userModal.style.display = 'none';
+            });
+            
+            // 点击模态框外部关闭
+            window.addEventListener('click', function(e) {
+                if (e.target === userModal) {
+                    userModal.style.display = 'none';
+                }
+            });
+            
+            // 搜索用户
+            userSearch.addEventListener('input', function() {
+                const searchTerm = userSearch.value.toLowerCase();
+                const userItems = userList.querySelectorAll('.user-item');
+                
+                userItems.forEach(function(item) {
+                    const username = item.querySelector('.user-name').textContent.toLowerCase();
+                    if (username.includes(searchTerm)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+            
+            // 选择用户开始聊天
+            userList.addEventListener('click', function(e) {
+                const userItem = e.target.closest('.user-item');
+                if (userItem) {
+                    const username = userItem.dataset.username;
+                    window.location.href = `/private_chat/${username}`;
+                }
+            });
+            
+            // 返回主页
+            backButton.addEventListener('click', function() {
+                window.location.href = '/';
+            });
+            
+            // 更新聊天列表
+            function updateChatList() {
+                fetch('/api/conversations')
+                    .then(response => response.json())
+                    .then(data => {
+                        chatList.innerHTML = '';
+                        
+                        data.conversations.forEach(conv => {
+                            const isActive = conv.username === currentReceiver;
+                            const chatItem = document.createElement('div');
+                            chatItem.className = `chat-item ${isActive ? 'active' : ''}`;
+                            chatItem.dataset.username = conv.username;
+                            
+                            chatItem.innerHTML = `
+                                <img class="chat-avatar" src="${conv.avatar_url}" alt="${conv.username}">
+                                <div class="chat-info">
+                                    <div class="chat-name">${conv.username}</div>
+                                    <div class="chat-preview">${conv.last_message}</div>
+                                </div>
+                                <div class="chat-meta">
+                                    <div class="chat-time">${conv.last_message_time}</div>
+                                    ${conv.unread_count > 0 ? `<div class="unread-badge">${conv.unread_count}</div>` : ''}
+                                </div>
+                            `;
+                            
+                            chatList.appendChild(chatItem);
+                        });
+                    });
+            }
+            
+            // 检查用户在线状态
+            function checkUserStatus() {
+                // 遍历连接的用户，检查当前聊天对象是否在线
+                for (const [sid, username] of Object.entries(socket.connected_users || {})) {
+                    if (username === currentReceiver) {
+                        userStatus.textContent = '在线';
+                        return;
+                    }
+                }
+                userStatus.textContent = '离线';
+            }
+            
+            // 连接成功后检查状态
+            socket.on('connect', function() {
+                checkUserStatus();
+            });
+            
+            // 标记消息为已读
+            function markMessagesAsRead() {
+                const unreadMessages = Array.from(messagesContainer.querySelectorAll('.message:not(.self)'))
+                    .filter(msg => {
+                        const statusSpan = msg.querySelector('.message-status');
+                        return !statusSpan || !statusSpan.textContent.includes('已读');
+                    })
+                    .map(msg => msg.dataset.id);
+                
+                if (unreadMessages.length > 0) {
+                    fetch('/api/mark_messages_read', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message_ids: unreadMessages
+                        })
+                    });
+                }
+            }
+            
+            // 页面获得焦点时标记消息为已读
+            window.addEventListener('focus', markMessagesAsRead);
+            
+            // 初始化时标记消息为已读
+            markMessagesAsRead();
+        });
+    </script>
+</body>
+</html> 
