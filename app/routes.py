@@ -389,37 +389,42 @@ def reset_password(username):
 
 @socketio.on('connect')
 def handle_connect():
-    if not current_user.is_authenticated:
-        return False
-    messages = current_app.db.messages.find()
-    for message in messages:
-        if isinstance(message.get('message'), dict):
-            msg_data = message['message']
-            # 如果消息没有头像URL，尝试从用户数据获取
-            if 'avatar_url' not in msg_data:
-                user_data = current_app.db.users.find_one({'username': msg_data['username']})
-                if user_data and 'avatar_url' in user_data:
-                    msg_data['avatar_url'] = user_data['avatar_url']
-        else:
-            user_data = current_app.db.users.find_one({'username': current_user.username})
-    messages = current_app.db.messages.find()
-    for message in messages:
-        if isinstance(message.get('message'), dict):
-            msg_data = message['message']
-            # 如果消息没有头像URL，尝试从用户数据获取
-            if 'avatar_url' not in msg_data:
-                user_data = current_app.db.users.find_one({'username': msg_data['username']})
-                if user_data and 'avatar_url' in user_data:
-                    msg_data['avatar_url'] = user_data['avatar_url']
-        else:
-            user_data = current_app.db.users.find_one({'username': current_user.username})
-            msg_data = {
-                'text': message.get('message', ''),
-                'username': current_user.username,
-                'avatar_url': user_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={current_user.username}"),
-                'timestamp': datetime.now().strftime('%H:%M')
-            }
-            emit('message', msg_data)
+    if current_user.is_authenticated:
+        logger.info(f"User {current_user.username} connected")
+        # 存储用户连接信息
+        connected_users[request.sid] = current_user.username
+        
+        # 发送在线状态给所有用户
+        emit('user_online', {'username': current_user.username}, broadcast=True)
+        
+        # 获取未读私信数量
+        from app.models import PrivateMessage
+        unread_count = PrivateMessage.get_unread_count(current_app.db, current_user.username)
+        if unread_count > 0:
+            emit('unread_notification', {'total_unread': unread_count})
+    else:
+        logger.warning("Unauthenticated connection attempt")
+        return False  # 拒绝未认证的连接
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    if request.sid in connected_users:
+        username = connected_users[request.sid]
+        logger.info(f"User {username} disconnected")
+        
+        # 移除用户连接信息
+        del connected_users[request.sid]
+        
+        # 检查用户是否还有其他活跃连接
+        still_connected = False
+        for sid, user in connected_users.items():
+            if user == username:
+                still_connected = True
+                break
+        
+        # 如果用户没有其他活跃连接，则广播离线状态
+        if not still_connected:
+            emit('user_offline', {'username': username}, broadcast=True)
 
 
 @socketio.on('message')
@@ -1023,3 +1028,292 @@ def server_status():
     except Exception as e:
         logger.error(f"获取服务器状态失败: {str(e)}")
         return jsonify({'error': '获取服务器状态失败'}), 500
+
+# 私聊相关路由
+@bp.route('/private_chat/<username>')
+@login_required
+def private_chat(username):
+    """打开与指定用户的私聊页面"""
+    # 检查目标用户是否存在
+    target_user = current_app.db.users.find_one({'username': username})
+    if not target_user:
+        flash('用户不存在')
+        return redirect(url_for('bp.index'))
+    
+    # 获取当前用户信息
+    current_user_data = current_app.db.users.find_one({'username': current_user.username})
+    
+    # 获取两人之间的聊天记录
+    from app.models import PrivateMessage
+    messages = PrivateMessage.get_conversation(current_app.db, current_user.username, username)
+    
+    # 格式化消息时间
+    for msg in messages:
+        if isinstance(msg['timestamp'], datetime):
+            msg['timestamp'] = msg['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+    
+    # 将消息标记为已读
+    unread_message_ids = [msg['id'] for msg in messages 
+                          if msg['receiver'] == current_user.username and not msg['read']]
+    if unread_message_ids:
+        PrivateMessage.mark_as_read(current_app.db, unread_message_ids, current_user.username)
+    
+    # 获取所有最近的私聊会话
+    recent_conversations = PrivateMessage.get_recent_conversations(current_app.db, current_user.username)
+    
+    # 获取所有用户列表（用于新建私聊）
+    all_users = list(current_app.db.users.find({}, {'username': 1, 'avatar_url': 1}))
+    
+    return render_template('private_chat.html', 
+                          target_user=target_user,
+                          messages=messages,
+                          recent_conversations=recent_conversations,
+                          all_users=all_users,
+                          current_user_data=current_user_data)
+
+@bp.route('/api/private_messages/<username>')
+@login_required
+def get_private_messages(username):
+    """获取与指定用户的私聊记录"""
+    from app.models import PrivateMessage
+    
+    # 获取分页参数
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 50, type=int)
+    skip = (page - 1) * limit
+    
+    # 获取聊天记录
+    messages = PrivateMessage.get_conversation(
+        current_app.db, 
+        current_user.username, 
+        username,
+        limit=limit,
+        skip=skip
+    )
+    
+    # 将消息格式化为前端需要的格式
+    formatted_messages = []
+    for msg in messages:
+        formatted_messages.append({
+            'id': msg['id'],
+            'content': msg['content'],
+            'sender': msg['sender'],
+            'receiver': msg['receiver'],
+            'timestamp': msg['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+            'is_self': msg['sender'] == current_user.username,
+            'type': msg['type'],
+            'read': msg['read'],
+            'edited': msg['edited']
+        })
+    
+    return jsonify({
+        'messages': formatted_messages,
+        'has_more': len(messages) == limit
+    })
+
+@bp.route('/api/conversations')
+@login_required
+def get_conversations():
+    """获取当前用户的所有私聊会话"""
+    from app.models import PrivateMessage
+    
+    conversations = PrivateMessage.get_recent_conversations(current_app.db, current_user.username)
+    
+    # 为每个会话添加用户头像
+    for conv in conversations:
+        user_data = current_app.db.users.find_one({'username': conv['username']})
+        if user_data and 'avatar_url' in user_data:
+            conv['avatar_url'] = user_data['avatar_url']
+        else:
+            conv['avatar_url'] = f"https://api.dicebear.com/7.x/avataaars/svg?seed={conv['username']}"
+        
+        # 格式化时间
+        conv['last_message_time'] = conv['last_message_time'].strftime('%Y-%m-%d %H:%M:%S')
+    
+    return jsonify({'conversations': conversations})
+
+@bp.route('/api/mark_messages_read', methods=['POST'])
+@login_required
+def mark_messages_read():
+    """将消息标记为已读"""
+    data = request.json
+    message_ids = data.get('message_ids', [])
+    
+    if not message_ids:
+        return jsonify({'success': False, 'error': '没有提供消息ID'}), 400
+    
+    from app.models import PrivateMessage
+    PrivateMessage.mark_as_read(current_app.db, message_ids, current_user.username)
+    
+    return jsonify({'success': True})
+
+# WebSocket事件处理
+@socketio.on('private_message')
+def handle_private_message(data):
+    """处理私聊消息"""
+    if not current_user.is_authenticated:
+        return
+    
+    sender = current_user.username
+    receiver = data.get('receiver')
+    content = data.get('content')
+    message_type = data.get('type', 'text')
+    
+    # 验证接收者是否存在
+    receiver_exists = current_app.db.users.find_one({'username': receiver})
+    if not receiver_exists:
+        emit('error', {'message': '接收者不存在'}, room=request.sid)
+        return
+    
+    # 创建私聊消息
+    from app.models import PrivateMessage
+    message_id = PrivateMessage.create_private_message(
+        current_app.db, 
+        sender, 
+        receiver, 
+        content,
+        message_type
+    )
+    
+    # 获取发送者头像
+    sender_data = current_app.db.users.find_one({'username': sender})
+    sender_avatar = sender_data.get('avatar_url', f"https://api.dicebear.com/7.x/avataaars/svg?seed={sender}")
+    
+    # 构建消息数据
+    message_data = {
+        'id': message_id,
+        'sender': sender,
+        'receiver': receiver,
+        'content': content,
+        'type': message_type,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'avatar_url': sender_avatar,
+        'read': False,
+        'edited': False
+    }
+    
+    # 发送给发送者
+    emit('private_message', message_data, room=request.sid)
+    
+    # 查找接收者的sid并发送
+    for session_id, session_user in connected_users.items():
+        if session_user == receiver:
+            emit('private_message', message_data, room=session_id)
+            break
+    
+    # 发送未读消息通知
+    unread_count = PrivateMessage.get_unread_count(current_app.db, receiver)
+    for session_id, session_user in connected_users.items():
+        if session_user == receiver:
+            emit('unread_notification', {
+                'sender': sender,
+                'unread_count': unread_count
+            }, room=session_id)
+            break
+
+@socketio.on('edit_private_message')
+def handle_edit_private_message(data):
+    """编辑私聊消息"""
+    if not current_user.is_authenticated:
+        return
+    
+    message_id = data.get('message_id')
+    new_content = data.get('content')
+    
+    # 验证消息存在且属于当前用户
+    message = current_app.db.private_messages.find_one({
+        'id': message_id,
+        'sender': current_user.username
+    })
+    
+    if not message:
+        emit('error', {'message': '消息不存在或无权编辑'}, room=request.sid)
+        return
+    
+    # 更新消息
+    current_app.db.private_messages.update_one(
+        {'id': message_id},
+        {'$set': {'content': new_content, 'edited': True}}
+    )
+    
+    # 构建更新数据
+    update_data = {
+        'id': message_id,
+        'content': new_content,
+        'edited': True
+    }
+    
+    # 发送给发送者
+    emit('private_message_updated', update_data, room=request.sid)
+    
+    # 发送给接收者
+    receiver = message['receiver']
+    for session_id, session_user in connected_users.items():
+        if session_user == receiver:
+            emit('private_message_updated', update_data, room=session_id)
+            break
+
+@socketio.on('delete_private_message')
+def handle_delete_private_message(data):
+    """删除私聊消息"""
+    if not current_user.is_authenticated:
+        return
+    
+    message_id = data.get('message_id')
+    
+    # 验证消息存在且属于当前用户
+    message = current_app.db.private_messages.find_one({
+        'id': message_id,
+        'sender': current_user.username
+    })
+    
+    if not message:
+        emit('error', {'message': '消息不存在或无权删除'}, room=request.sid)
+        return
+    
+    # 删除消息
+    current_app.db.private_messages.delete_one({'id': message_id})
+    
+    # 通知发送者和接收者
+    delete_data = {'id': message_id}
+    
+    # 发送给发送者
+    emit('private_message_deleted', delete_data, room=request.sid)
+    
+    # 发送给接收者
+    receiver = message['receiver']
+    for session_id, session_user in connected_users.items():
+        if session_user == receiver:
+            emit('private_message_deleted', delete_data, room=session_id)
+            break
+
+# 添加全局变量来跟踪连接的用户
+connected_users = {}
+
+# 添加WebSocket事件处理函数，用于标记消息为已读
+@socketio.on('mark_messages_read')
+def handle_mark_messages_read(data):
+    """处理标记消息为已读的请求"""
+    if not current_user.is_authenticated:
+        return
+    
+    message_ids = data.get('message_ids', [])
+    if not message_ids:
+        return
+    
+    from app.models import PrivateMessage
+    PrivateMessage.mark_as_read(current_app.db, message_ids, current_user.username)
+    
+    # 通知发送者消息已读
+    for message_id in message_ids:
+        message = current_app.db.private_messages.find_one({'id': message_id})
+        if message:
+            sender = message['sender']
+            # 查找发送者的sid并发送通知
+            for session_id, session_user in connected_users.items():
+                if session_user == sender:
+                    emit('message_read', {
+                        'message_id': message_id,
+                        'reader': current_user.username
+                    }, room=session_id)
+                    break
