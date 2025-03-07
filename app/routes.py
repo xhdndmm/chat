@@ -1047,6 +1047,11 @@ def private_chat(username):
     from app.models import PrivateMessage
     messages = PrivateMessage.get_conversation(current_app.db, current_user.username, username)
     
+    # 格式化消息时间
+    for msg in messages:
+        if isinstance(msg['timestamp'], datetime):
+            msg['timestamp'] = msg['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+    
     # 将消息标记为已读
     unread_message_ids = [msg['id'] for msg in messages 
                           if msg['receiver'] == current_user.username and not msg['read']]

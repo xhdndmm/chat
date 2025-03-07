@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>私聊 - {{ target_user.username }}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
     <style>
         /* 私聊页面样式 */
@@ -379,7 +379,7 @@
                     <div class="message-content">
                         <div class="message-text">{{ msg.content }}</div>
                         <div class="message-time">
-                            {{ msg.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {{ msg.timestamp }}
                             {% if msg.edited %}
                             <span class="message-status">(已编辑)</span>
                             {% endif %}
@@ -760,6 +760,19 @@
             
             // 初始化时标记消息为已读
             markMessagesAsRead();
+            
+            // 消息已读状态更新
+            socket.on('message_read', function(data) {
+                if (data.message_id) {
+                    const messageElement = document.querySelector(`.message[data-id="${data.message_id}"]`);
+                    if (messageElement && messageElement.classList.contains('self')) {
+                        const statusSpan = messageElement.querySelector('.message-status');
+                        if (statusSpan) {
+                            statusSpan.textContent = '已读';
+                        }
+                    }
+                }
+            });
         });
     </script>
 </body>
