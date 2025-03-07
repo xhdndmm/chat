@@ -121,9 +121,54 @@ function initEmojiPanel(emojiBtn, emojiPanel, emojis, input) {
 
 // 初始化 Socket.IO 事件
 function initSocketEvents(socket) {
+    // 清空消息容器，准备接收历史消息
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.innerHTML = '';
+    
+    // 添加一个加载中的提示
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading-message';
+    loadingDiv.textContent = '加载消息历史...';
+    messagesContainer.appendChild(loadingDiv);
+    
+    // 标记是否已经收到历史消息
+    let historyReceived = false;
+    
+    // 处理历史消息
+    socket.on('history_message', (msgData) => {
+        // 移除加载提示
+        if (!historyReceived) {
+            messagesContainer.innerHTML = '';
+            historyReceived = true;
+        }
+        
+        console.log('Received history message:', msgData);
+        // 如果是自己发送的消息，标记为已读
+        if (msgData.username === window.CHAT_CONFIG.currentUser.username) {
+            if (!msgData.read_by) {
+                msgData.read_by = [window.CHAT_CONFIG.currentUser.username];
+            }
+        }
+        appendMessage(msgData);
+    });
+    
     socket.on('message', (msgData) => {
         console.log('Received message:', msgData);
+        // 如果是自己发送的消息，标记为已读
+        if (msgData.username === window.CHAT_CONFIG.currentUser.username) {
+            if (!msgData.read_by) {
+                msgData.read_by = [window.CHAT_CONFIG.currentUser.username];
+            }
+        }
         appendMessage(msgData);
+        
+        // 如果不是自己发送的消息，标记为已读
+        if (msgData.username !== window.CHAT_CONFIG.currentUser.username) {
+            socket.emit('mark_messages_read', {
+                message_ids: [msgData.id],
+                is_private: false
+            });
+        }
     });
 
     socket.on('message_status', (data) => {
@@ -165,6 +210,32 @@ function initSocketEvents(socket) {
             typingUsers.delete(data.username);
         }
         updateTypingStatus();
+    });
+    
+    // 处理消息已读状态更新
+    socket.on('message_read', (data) => {
+        if (!data.is_private) {  // 只处理公开聊天消息
+            const messageDiv = document.querySelector(`[data-message-id="${data.message_id}"]`);
+            if (messageDiv) {
+                // 更新已读数量
+                const readCountSpan = messageDiv.querySelector('.read-count');
+                if (readCountSpan) {
+                    readCountSpan.textContent = `${data.read_count} 人已读`;
+                }
+            }
+        }
+    });
+    
+    // 处理未读公开消息
+    socket.on('unread_public_messages', (data) => {
+        console.log('Unread public messages:', data);
+        if (data.message_ids && data.message_ids.length > 0) {
+            // 标记这些消息为已读
+            socket.emit('mark_messages_read', {
+                message_ids: data.message_ids,
+                is_private: false
+            });
+        }
     });
 }
 
