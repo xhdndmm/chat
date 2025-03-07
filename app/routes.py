@@ -402,6 +402,44 @@ def handle_connect():
         unread_count = PrivateMessage.get_unread_count(current_app.db, current_user.username)
         if unread_count > 0:
             emit('unread_notification', {'total_unread': unread_count})
+        
+        # 获取公开聊天的历史消息
+        recent_messages = list(current_app.db.messages.find().sort('_id', -1).limit(50))
+        recent_messages.reverse()  # 按时间正序排列
+        
+        # 发送历史消息给客户端
+        for message_doc in recent_messages:
+            if 'message' in message_doc:
+                message = message_doc['message']
+                # 确保消息有 read_by 字段
+                if 'read_by' not in message:
+                    message['read_by'] = []
+                # 如果当前用户不在已读列表中，添加
+                if current_user.username not in message['read_by']:
+                    message['read_by'].append(current_user.username)
+                    current_app.db.messages.update_one(
+                        {'message.id': message['id']},
+                        {'$set': {'message.read_by': message['read_by']}}
+                    )
+                # 发送消息给客户端
+                emit('history_message', message)
+        
+        # 收集未读消息ID
+        unread_message_ids = []
+        for message_doc in recent_messages:
+            if 'message' in message_doc:
+                message = message_doc['message']
+                if 'read_by' not in message:
+                    message['read_by'] = []
+                if current_user.username not in message['read_by'] and message['username'] != current_user.username:
+                    unread_message_ids.append(message['id'])
+        
+        # 如果有未读消息，发送给客户端
+        if unread_message_ids:
+            emit('unread_public_messages', {
+                'message_ids': unread_message_ids,
+                'count': len(unread_message_ids)
+            })
     else:
         logger.warning("Unauthenticated connection attempt")
         return False  # 拒绝未认证的连接
