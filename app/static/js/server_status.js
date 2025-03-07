@@ -1,5 +1,31 @@
 // 服务器状态监控脚本
 
+// 图表数据存储
+const chartData = {
+    cpu: [],
+    memory: [],
+    disk: [],
+    swap: [],
+    network: {
+        sent: [],
+        received: []
+    }
+};
+
+// 图表配置
+const chartConfig = {
+    maxDataPoints: 60, // 最多显示60个数据点
+    updateInterval: 1000, // 更新间隔（毫秒）
+    colors: {
+        cpu: '#2196F3',
+        memory: '#FF9800',
+        disk: '#9C27B0',
+        swap: '#F44336',
+        networkSent: '#4CAF50',
+        networkReceived: '#00BCD4'
+    }
+};
+
 // 从后端API获取服务器状态数据
 async function getServerStatus() {
     try {
@@ -56,9 +82,202 @@ function updateUserView(data) {
     }
 }
 
+// 更新图表数据
+function updateChartData(data) {
+    const timestamp = new Date().getTime();
+    
+    // 更新CPU数据
+    chartData.cpu.push({
+        time: timestamp,
+        value: data.cpu.usage
+    });
+    
+    // 更新内存数据
+    chartData.memory.push({
+        time: timestamp,
+        value: data.memory.usage
+    });
+    
+    // 更新硬盘数据
+    chartData.disk.push({
+        time: timestamp,
+        value: data.disk.usage
+    });
+    
+    // 更新SWAP数据
+    chartData.swap.push({
+        time: timestamp,
+        value: data.swap.usage
+    });
+    
+    // 更新网络数据
+    chartData.network.sent.push({
+        time: timestamp,
+        value: data.network.sent
+    });
+    chartData.network.received.push({
+        time: timestamp,
+        value: data.network.received
+    });
+    
+    // 限制数据点数量
+    Object.keys(chartData).forEach(key => {
+        if (Array.isArray(chartData[key])) {
+            if (chartData[key].length > chartConfig.maxDataPoints) {
+                chartData[key].shift();
+            }
+        } else if (typeof chartData[key] === 'object') {
+            Object.keys(chartData[key]).forEach(subKey => {
+                if (chartData[key][subKey].length > chartConfig.maxDataPoints) {
+                    chartData[key][subKey].shift();
+                }
+            });
+        }
+    });
+}
+
+// 绘制图表
+function drawCharts() {
+    // 绘制CPU使用率图表
+    drawChart('cpuChart', chartData.cpu, 'CPU使用率 (%)', chartConfig.colors.cpu);
+    
+    // 绘制内存使用率图表
+    drawChart('memoryChart', chartData.memory, '内存使用率 (%)', chartConfig.colors.memory);
+    
+    // 绘制硬盘使用率图表
+    drawChart('diskChart', chartData.disk, '硬盘使用率 (%)', chartConfig.colors.disk);
+    
+    // 绘制SWAP使用率图表
+    drawChart('swapChart', chartData.swap, 'SWAP使用率 (%)', chartConfig.colors.swap);
+    
+    // 绘制网络流量图表
+    drawNetworkChart('networkChart', chartData.network);
+}
+
+// 绘制单个图表
+function drawChart(canvasId, data, label, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, width, height);
+    
+    // 绘制网格
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = (height * i) / 4;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+    }
+    
+    // 绘制数据线
+    if (data.length > 1) {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        
+        data.forEach((point, index) => {
+            const x = (width * index) / (chartConfig.maxDataPoints - 1);
+            const y = height - (point.value * height) / 100;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+    }
+    
+    // 绘制标签
+    ctx.fillStyle = '#333';
+    ctx.font = '12px "Segoe UI"';
+    ctx.fillText(label, 10, 20);
+}
+
+// 绘制网络流量图表
+function drawNetworkChart(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, width, height);
+    
+    // 绘制网格
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = (height * i) / 4;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+    }
+    
+    // 绘制发送数据线
+    if (data.sent.length > 1) {
+        ctx.beginPath();
+        ctx.strokeStyle = chartConfig.colors.networkSent;
+        ctx.lineWidth = 2;
+        
+        data.sent.forEach((point, index) => {
+            const x = (width * index) / (chartConfig.maxDataPoints - 1);
+            const y = height - (point.value * height) / 100;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+    }
+    
+    // 绘制接收数据线
+    if (data.received.length > 1) {
+        ctx.beginPath();
+        ctx.strokeStyle = chartConfig.colors.networkReceived;
+        ctx.lineWidth = 2;
+        
+        data.received.forEach((point, index) => {
+            const x = (width * index) / (chartConfig.maxDataPoints - 1);
+            const y = height - (point.value * height) / 100;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+    }
+    
+    // 绘制标签
+    ctx.fillStyle = '#333';
+    ctx.font = '12px "Segoe UI"';
+    ctx.fillText('网络流量 (MB/s)', 10, 20);
+}
+
 // 更新管理员视图
 function updateAdminView(data) {
     if (!data) return;
+    
+    // 更新图表数据
+    updateChartData(data);
     
     // 更新CPU使用率
     const adminCpuFill = document.querySelector('.admin-cpu-fill');
@@ -92,12 +311,12 @@ function updateAdminView(data) {
         adminSwapValue.textContent = `${data.swap.usage}% (${Math.round(data.swap.used/1024*10)/10}GB/${Math.round(data.swap.total/1024*10)/10}GB)`;
     }
     
-    // 更新IO使用率
-    const adminIoFill = document.querySelector('.admin-io-fill');
-    const adminIoValue = document.querySelector('.admin-io-value');
-    if (adminIoFill && adminIoValue) {
-        adminIoFill.style.width = `${data.io.usage}%`;
-        adminIoValue.textContent = `读取: ${data.io.read}MB/s | 写入: ${data.io.write}MB/s`;
+    // 更新网络状态
+    const networkSentValue = document.querySelector('.network-sent-value');
+    const networkReceivedValue = document.querySelector('.network-received-value');
+    if (networkSentValue && networkReceivedValue) {
+        networkSentValue.textContent = `${data.network.sent} MB/s`;
+        networkReceivedValue.textContent = `${data.network.received} MB/s`;
     }
     
     // 更新CPU核心
@@ -117,6 +336,9 @@ function updateAdminView(data) {
             coresContainer.appendChild(coreElement);
         });
     }
+    
+    // 绘制图表
+    drawCharts();
 }
 
 // 初始化服务器状态监控
@@ -199,6 +421,9 @@ function createAdminView() {
                         <div class="metric-value admin-memory-value">0%</div>
                     </div>
                 </div>
+                <div class="chart-container">
+                    <canvas id="cpuChart" width="400" height="200"></canvas>
+                </div>
             </div>
             
             <div class="status-section">
@@ -219,18 +444,25 @@ function createAdminView() {
                         <div class="metric-value admin-swap-value">0%</div>
                     </div>
                 </div>
+                <div class="chart-container">
+                    <canvas id="diskChart" width="400" height="200"></canvas>
+                </div>
             </div>
             
             <div class="status-section">
-                <h5>I/O</h5>
-                <div class="status-metrics">
-                    <div class="metric">
-                        <div class="metric-title">磁盘 I/O</div>
-                        <div class="metric-bar">
-                            <div class="metric-fill io-fill admin-io-fill" style="width: 0%"></div>
-                        </div>
-                        <div class="metric-value admin-io-value">读取: 0MB/s | 写入: 0MB/s</div>
+                <h5>网络</h5>
+                <div class="network-stats">
+                    <div class="network-stat">
+                        <div class="network-stat-title">发送</div>
+                        <div class="network-stat-value network-sent-value">0 MB/s</div>
                     </div>
+                    <div class="network-stat">
+                        <div class="network-stat-title">接收</div>
+                        <div class="network-stat-value network-received-value">0 MB/s</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="networkChart" width="400" height="200"></canvas>
                 </div>
             </div>
             
@@ -277,12 +509,13 @@ async function updateStatus() {
     try {
         const data = await getServerStatus();
         if (data) {
-            updateUserView(data);
+            // 检查是否是管理员
+            const isAdmin = window.CHAT_CONFIG && window.CHAT_CONFIG.currentUser && window.CHAT_CONFIG.currentUser.isAdmin;
             
-            // 如果管理员视图存在，更新它
-            const adminView = document.querySelector('.server-status-admin');
-            if (adminView && adminView.style.display !== 'none') {
+            if (isAdmin) {
                 updateAdminView(data);
+            } else {
+                updateUserView(data);
             }
         }
     } catch (error) {
@@ -290,43 +523,53 @@ async function updateStatus() {
     }
 }
 
-// 使元素可拖动
+// 使元素可拖动（优化版本）
 function makeDraggable(element) {
     const header = element.querySelector('.status-header');
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
     
-    header.onmousedown = dragMouseDown;
+    header.addEventListener('mousedown', dragStart);
     
-    function dragMouseDown(e) {
-        e = e || window.event;
-        e.preventDefault();
-        // 获取鼠标位置
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        document.onmouseup = closeDragElement;
-        // 鼠标移动时调用函数
-        document.onmousemove = elementDrag;
+    function dragStart(e) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+        
+        if (e.target === header || e.target.parentNode === header) {
+            isDragging = true;
+        }
     }
     
-    function elementDrag(e) {
-        e = e || window.event;
-        e.preventDefault();
-        // 计算新位置
-        pos1 = pos3 - e.clientX;
-        pos2 = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        // 设置元素的新位置
-        element.style.top = (element.offsetTop - pos2) + "px";
-        element.style.left = (element.offsetLeft - pos1) + "px";
-        element.style.bottom = "auto";
-        element.style.right = "auto";
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+    
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+            
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+            
+            xOffset = currentX;
+            yOffset = currentY;
+            
+            setTranslate(currentX, currentY, element);
+        }
     }
     
-    function closeDragElement() {
-        // 停止移动
-        document.onmouseup = null;
-        document.onmousemove = null;
+    function dragEnd() {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+    }
+    
+    function setTranslate(xPos, yPos, el) {
+        el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
     }
 }
 

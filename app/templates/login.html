@@ -26,7 +26,7 @@
             </form>
             <div class="form-footer">
                 <a href="{{ url_for('main.contact_admin') }}" class="forgot-link">忘记密码？</a>
-                <a href="{{ url_for('main.contact_admin') }}" class="register-link">注册账号</a>
+                <a href="{{ url_for('main.register') }}" class="register-link">注册账号</a>
             </div>
             {% with messages = get_flashed_messages() %}
                 {% if messages %}

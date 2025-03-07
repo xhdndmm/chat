@@ -10,6 +10,7 @@ login_manager = LoginManager()
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'your_secret_key'
+    app.config['UPLOAD_FOLDER'] = 'app/static/uploads'
 
     # Initialize MongoDB client
     client = db_config.get_mongo_client()
@@ -18,6 +19,10 @@ def create_app():
     from .routes import bp
     app.register_blueprint(bp)
     socketio.init_app(app)
+
+    # Initialize system settings
+    from .routes import init_system_settings
+    init_system_settings(app.db)
 
     # Initialize LoginManager
     login_manager.login_view = 'main.login'  # 设置登录视图
@@ -30,7 +35,9 @@ def create_app():
             return User(
                 user_data['username'], 
                 user_data['password'],
-                user_data.get('is_admin', False)  # 获取管理员标识，默认为 False
+                user_data.get('is_admin', False),  # 获取管理员标识，默认为 False
+                user_data.get('avatar_url'),  # 获取头像URL
+                user_data.get('settings')  # 获取用户设置
             )
         return None
 
