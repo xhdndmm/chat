@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 聊天室</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box register-box">
+            <div class="logo">
+                <div class="logo-circle">Logo</div>
+            </div>
+            <h1>创建账号</h1>
+            <p class="subtitle">用户注册</p>
+            
+            {% if register_mode == 'disabled' %}
+            <div class="register-disabled">
+                <p>抱歉，当前系统不允许注册新用户</p>
+                <p>请联系管理员获取账号</p>
+                <a href="{{ url_for('main.login') }}" class="back-btn">返回登录</a>
+            </div>
+            {% else %}
+            <form method="post" class="register-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <input type="text" name="username" placeholder="用户名" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" placeholder="密码" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="confirm_password" placeholder="确认密码" required>
+                </div>
+                <div class="form-group">
+                    <textarea name="introduction" placeholder="个人介绍" rows="3"></textarea>
+                </div>
+                <div class="form-group avatar-upload">
+                    <label for="avatar">上传头像（可选）</label>
+                    <input type="file" id="avatar" name="avatar" accept="image/*">
+                    <div class="avatar-preview">
+                        <img id="avatar-preview-img" src="https://api.dicebear.com/7.x/avataaars/svg?seed=preview" alt="头像预览">
+                        <p class="avatar-hint">不上传将使用系统生成的默认头像</p>
+                    </div>
+                </div>
+                {% if register_mode == 'apply' %}
+                <div class="form-group">
+                    <textarea name="apply_reason" placeholder="申请理由" rows="3" required></textarea>
+                </div>
+                {% endif %}
+                <button type="submit" class="login-btn">
+                    {% if register_mode == 'apply' %}
+                    提交申请
+                    {% else %}
+                    注册
+                    {% endif %}
+                </button>
+            </form>
+            {% endif %}
+            
+            <div class="form-footer">
+                <a href="{{ url_for('main.login') }}" class="back-link">返回登录</a>
+            </div>
+            
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="error-messages">
+                        {% for message in messages %}
+                            <p class="error">{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <script>
+        // 头像预览功能
+        document.getElementById('avatar').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatar-preview-img').src = e.target.result;
+                    document.querySelector('.avatar-hint').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                // 如果用户取消选择，恢复默认头像
+                document.getElementById('avatar-preview-img').src = "https://api.dicebear.com/7.x/avataaars/svg?seed=preview";
+                document.querySelector('.avatar-hint').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html> 

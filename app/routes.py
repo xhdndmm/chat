@@ -14,6 +14,11 @@ from config.log_config import logger
 from functools import wraps
 import zipfile
 import io
+from werkzeug.security import generate_password_hash, check_password_hash
+import json
+import uuid
+import shutil
+import psutil
 
 
 bp = Blueprint('main', __name__)
@@ -107,9 +112,215 @@ def index():
     return render_template('chat.html')
 
 
+# 添加系统设置集合的初始化
+def init_system_settings(db):
+    """初始化系统设置"""
+    if not db.system_settings.find_one():
+        db.system_settings.insert_one({
+            'register_mode': 'apply',  # 默认为申请注册模式
+        })
+
+# 获取系统设置
+def get_system_settings():
+    """获取系统设置"""
+    settings = current_app.db.system_settings.find_one()
+    if not settings:
+        init_system_settings(current_app.db)
+        settings = current_app.db.system_settings.find_one()
+    return settings
+
+@bp.route('/register', methods=['GET', 'POST'])
+def register():
+    """用户注册页面"""
+    # 获取注册模式
+    settings = get_system_settings()
+    register_mode = settings.get('register_mode', 'apply')
+    
+    # 如果是禁止注册模式，直接显示禁止注册页面
+    if register_mode == 'disabled' and request.method == 'GET':
+        return render_template('register.html', register_mode=register_mode)
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        introduction = request.form.get('introduction', '')
+        
+        # 验证用户输入
+        if not username or not password:
+            flash('用户名和密码不能为空')
+            return render_template('register.html', register_mode=register_mode)
+        
+        if password != confirm_password:
+            flash('两次输入的密码不一致')
+            return render_template('register.html', register_mode=register_mode)
+        
+        # 检查用户名是否已存在
+        if current_app.db.users.find_one({'username': username}):
+            flash('用户名已存在')
+            return render_template('register.html', register_mode=register_mode)
+        
+        # 处理头像上传
+        avatar_url = f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"  # 默认头像
+        avatar_file = request.files.get('avatar')
+        if avatar_file and avatar_file.filename and allowed_avatar(avatar_file.filename):
+            try:
+                filename = secure_filename(f"{username}_{int(time.time())}{os.path.splitext(avatar_file.filename)[1]}")
+                avatar_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'avatars', filename)
+                os.makedirs(os.path.dirname(avatar_path), exist_ok=True)
+                avatar_file.save(avatar_path)
+                avatar_url = url_for('static', filename=f'uploads/avatars/{filename}')
+                logger.info(f"用户 {username} 上传了头像: {filename}")
+            except Exception as e:
+                logger.error(f"头像上传失败: {str(e)}")
+                # 上传失败时使用默认头像，不影响注册流程
+        else:
+            logger.info(f"用户 {username} 使用默认头像")
+        
+        # 根据注册模式处理注册
+        if register_mode == 'direct':
+            # 直接注册模式，创建用户
+            current_app.db.users.insert_one({
+                'username': username,
+                'password': password,
+                'is_admin': False,
+                'avatar_url': avatar_url,
+                'introduction': introduction,
+                'created_at': datetime.now(),
+                'status': '正常',
+                'settings': {
+                    'theme': 'light',
+                    'notification': True,
+                    'display_name': username,
+                    'bio': introduction,
+                    'email': ''
+                }
+            })
+            flash('注册成功，请登录')
+            return redirect(url_for('main.login'))
+        elif register_mode == 'apply':
+            # 申请注册模式，创建注册申请
+            apply_reason = request.form.get('apply_reason', '')
+            current_app.db.register_applications.insert_one({
+                'username': username,
+                'password': password,
+                'avatar_url': avatar_url,
+                'introduction': introduction,
+                'apply_reason': apply_reason,
+                'created_at': datetime.now(),
+                'status': 'pending'  # 待审核
+            })
+            flash('申请已提交，请等待管理员审核')
+            return redirect(url_for('main.login'))
+    
+    return render_template('register.html', register_mode=register_mode)
+
+@bp.route('/admin/application_detail/<application_id>')
+@login_required
+@admin_required
+def application_detail(application_id):
+    """获取注册申请详情"""
+    try:
+        app = current_app.db.register_applications.find_one({'_id': ObjectId(application_id)})
+        if not app:
+            return jsonify({'error': '申请不存在'}), 404
+        
+        # 转换ObjectId为字符串
+        app['_id'] = str(app['_id'])
+        # 格式化时间
+        app['created_at'] = app['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        return jsonify(app)
+    except Exception as e:
+        logger.error(f"获取申请详情失败: {str(e)}")
+        return jsonify({'error': '获取申请详情失败'}), 500
+
+@bp.route('/admin/approve_application/<application_id>', methods=['POST'])
+@login_required
+@admin_required
+def approve_application(application_id):
+    """批准注册申请"""
+    try:
+        app = current_app.db.register_applications.find_one({'_id': ObjectId(application_id)})
+        if not app:
+            return jsonify({'success': False, 'message': '申请不存在'}), 404
+        
+        # 创建用户
+        current_app.db.users.insert_one({
+            'username': app['username'],
+            'password': app['password'],
+            'is_admin': False,
+            'avatar_url': app['avatar_url'],
+            'introduction': app.get('introduction', ''),
+            'created_at': datetime.now(),
+            'status': '正常',
+            'settings': {
+                'theme': 'light',
+                'notification': True,
+                'display_name': app['username'],
+                'bio': app.get('introduction', ''),
+                'email': ''
+            }
+        })
+        
+        # 更新申请状态
+        current_app.db.register_applications.update_one(
+            {'_id': ObjectId(application_id)},
+            {'$set': {'status': 'approved'}}
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"批准申请失败: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/admin/reject_application/<application_id>', methods=['POST'])
+@login_required
+@admin_required
+def reject_application(application_id):
+    """拒绝注册申请"""
+    try:
+        app = current_app.db.register_applications.find_one({'_id': ObjectId(application_id)})
+        if not app:
+            return jsonify({'success': False, 'message': '申请不存在'}), 404
+        
+        # 更新申请状态
+        current_app.db.register_applications.update_one(
+            {'_id': ObjectId(application_id)},
+            {'$set': {'status': 'rejected'}}
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"拒绝申请失败: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/update_settings', methods=['POST'])
+@login_required
+@admin_required
+def update_settings():
+    """更新系统设置"""
+    try:
+        register_mode = request.form.get('register_mode', 'apply')
+        
+        # 更新系统设置
+        current_app.db.system_settings.update_one(
+            {},
+            {'$set': {'register_mode': register_mode}},
+            upsert=True
+        )
+        
+        flash('系统设置已更新')
+        return redirect(url_for('main.admin'))
+    except Exception as e:
+        logger.error(f"更新系统设置失败: {str(e)}")
+        flash('更新系统设置失败')
+        return redirect(url_for('main.admin'))
+
+# 修改管理员页面路由，添加注册申请和系统设置
 @bp.route('/admin', methods=['GET', 'POST'])
 @login_required
-@admin_required  # 添加管理员验证
+@admin_required
 def admin():
     if request.method == 'POST':
         username = request.form['username']
@@ -144,7 +355,14 @@ def admin():
                 flash('用户已存在')
 
     users = list(current_app.db.users.find())
-    return render_template('admin.html', users=users)
+    
+    # 获取注册申请
+    register_applications = list(current_app.db.register_applications.find({'status': 'pending'}))
+    
+    # 获取系统设置
+    system_settings = get_system_settings()
+    
+    return render_template('admin.html', users=users, register_applications=register_applications, system_settings=system_settings)
 
 
 @bp.route('/admin/delete/<username>', methods=['POST'])

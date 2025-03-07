@@ -21,62 +21,139 @@
                     </svg>
                     添加用户
                 </button>
+                <button class="settings-btn" onclick="showSettingsModal()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                    </svg>
+                    系统设置
+                </button>
             </div>
         </div>
 
-        <div class="table-container">
-            <table class="user-table">
-                <thead>
-                    <tr>
-                        <th>序号</th>
-                        <th>用户名</th>
-                        <th>角色</th>
-                        <th>状态</th>
-                        <th>创建时间</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td class="user-info">
-                            <img src="{{ user.get('avatar_url', url_for('static', filename='images/default-avatar.png')) }}" 
-                                 alt="{{ user.username }}" class="user-avatar">
-                            <span>{{ user.username }}</span>
-                        </td>
-                        <td>
-                            <span class="role-badge {% if user.is_admin %}admin{% else %}user{% endif %}">
-                                {{ '管理员' if user.is_admin else '普通用户' }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="status-badge">{{ user.get('status', '正常') }}</span>
-                        </td>
-                        <td>{{ user.get('created_at', '').strftime('%Y-%m-%d %H:%M:%S') if user.get('created_at') else '未知' }}</td>
-                        <td class="actions">
-                            <button class="action-btn edit" onclick="showEditModal('{{ user.username }}')" title="编辑">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                                </svg>
-                            </button>
-                            <button class="action-btn reset" onclick="resetPassword('{{ user.username }}')" title="重置密码">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
-                                </svg>
-                            </button>
-                            {% if not user.is_admin %}
-                            <button class="action-btn delete" onclick="deleteUser('{{ user.username }}')" title="删除">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                </svg>
-                            </button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- 标签页导航 -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab('users')">用户管理</button>
+            <button class="tab-btn" onclick="switchTab('applications')">注册申请 
+                {% if register_applications|length > 0 %}
+                <span class="badge">{{ register_applications|length }}</span>
+                {% endif %}
+            </button>
+        </div>
+
+        <!-- 用户管理标签页 -->
+        <div id="users-tab" class="tab-content active">
+            <div class="table-container">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>用户名</th>
+                            <th>角色</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td class="user-info">
+                                <img src="{{ user.get('avatar_url', url_for('static', filename='images/default-avatar.png')) }}" 
+                                     alt="{{ user.username }}" class="user-avatar">
+                                <span>{{ user.username }}</span>
+                            </td>
+                            <td>
+                                <span class="role-badge {% if user.is_admin %}admin{% else %}user{% endif %}">
+                                    {{ '管理员' if user.is_admin else '普通用户' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge">{{ user.get('status', '正常') }}</span>
+                            </td>
+                            <td>{{ user.get('created_at', '').strftime('%Y-%m-%d %H:%M:%S') if user.get('created_at') else '未知' }}</td>
+                            <td class="actions">
+                                <button class="action-btn edit" onclick="showEditModal('{{ user.username }}')" title="编辑">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                    </svg>
+                                </button>
+                                <button class="action-btn reset" onclick="resetPassword('{{ user.username }}')" title="重置密码">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+                                    </svg>
+                                </button>
+                                {% if not user.is_admin %}
+                                <button class="action-btn delete" onclick="deleteUser('{{ user.username }}')" title="删除">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                    </svg>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 注册申请标签页 -->
+        <div id="applications-tab" class="tab-content">
+            {% if register_applications|length == 0 %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+                        <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>
+                    </svg>
+                </div>
+                <h3>暂无注册申请</h3>
+                <p>当有用户提交注册申请时，将会显示在这里</p>
+            </div>
+            {% else %}
+            <div class="table-container">
+                <table class="application-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>用户名</th>
+                            <th>申请时间</th>
+                            <th>申请理由</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in register_applications %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td class="user-info">
+                                <img src="{{ app.get('avatar_url', url_for('static', filename='images/default-avatar.png')) }}" 
+                                     alt="{{ app.username }}" class="user-avatar">
+                                <span>{{ app.username }}</span>
+                            </td>
+                            <td>{{ app.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                <button class="view-reason-btn" onclick="showApplicationDetail('{{ app._id }}')">查看详情</button>
+                            </td>
+                            <td class="actions">
+                                <button class="action-btn approve" onclick="approveApplication('{{ app._id }}')" title="批准">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                                    </svg>
+                                </button>
+                                <button class="action-btn reject" onclick="rejectApplication('{{ app._id }}')" title="拒绝">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -85,7 +162,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle">添加用户</h2>
-                <button class="close-btn" onclick="hideModal()">&times;</button>
+                <button class="close-btn" onclick="hideModal('userModal')">&times;</button>
             </div>
             <form id="userForm" method="post">
                 <input type="hidden" id="editUsername" name="editUsername">
@@ -105,12 +182,178 @@
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="submit-btn">保存</button>
-                    <button type="button" class="cancel-btn" onclick="hideModal()">取消</button>
+                    <button type="button" class="cancel-btn" onclick="hideModal('userModal')">取消</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- 系统设置模态框 -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>系统设置</h2>
+                <button class="close-btn" onclick="hideModal('settingsModal')">&times;</button>
+            </div>
+            <form id="settingsForm" method="post" action="{{ url_for('main.update_settings') }}">
+                <div class="form-group">
+                    <label>注册模式</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="register_mode" value="direct" {% if system_settings.register_mode == 'direct' %}checked{% endif %}>
+                            <span>直接注册</span>
+                            <small>用户可以直接注册并使用系统</small>
+                        </label>
+                        <label>
+                            <input type="radio" name="register_mode" value="apply" {% if system_settings.register_mode == 'apply' %}checked{% endif %}>
+                            <span>申请注册</span>
+                            <small>用户需要提交申请，管理员审核通过后才能使用系统</small>
+                        </label>
+                        <label>
+                            <input type="radio" name="register_mode" value="disabled" {% if system_settings.register_mode == 'disabled' %}checked{% endif %}>
+                            <span>禁止注册</span>
+                            <small>禁止用户自行注册，只能由管理员创建账号</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="submit-btn">保存设置</button>
+                    <button type="button" class="cancel-btn" onclick="hideModal('settingsModal')">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 申请详情模态框 -->
+    <div id="applicationDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>申请详情</h2>
+                <button class="close-btn" onclick="hideModal('applicationDetailModal')">&times;</button>
+            </div>
+            <div class="application-detail">
+                <div class="user-profile">
+                    <div class="user-avatar-large">
+                        <img id="detail-avatar" src="" alt="用户头像">
+                    </div>
+                    <h3 id="detail-username"></h3>
+                </div>
+                <div class="detail-section">
+                    <h4>个人介绍</h4>
+                    <p id="detail-introduction"></p>
+                </div>
+                <div class="detail-section">
+                    <h4>申请理由</h4>
+                    <p id="detail-reason"></p>
+                </div>
+                <div class="detail-section">
+                    <h4>申请时间</h4>
+                    <p id="detail-time"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="detail-approve-btn" class="submit-btn">批准申请</button>
+                    <button type="button" id="detail-reject-btn" class="cancel-btn">拒绝申请</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script>
+        // 标签页切换
+        function switchTab(tabName) {
+            // 隐藏所有标签页内容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 取消所有标签按钮的激活状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示选中的标签页内容
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // 激活对应的标签按钮
+            event.currentTarget.classList.add('active');
+        }
+        
+        // 显示系统设置模态框
+        function showSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+        
+        // 显示申请详情模态框
+        function showApplicationDetail(appId) {
+            // 通过AJAX获取申请详情
+            fetch(`/admin/application_detail/${appId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('detail-username').textContent = data.username;
+                    document.getElementById('detail-avatar').src = data.avatar_url;
+                    document.getElementById('detail-introduction').textContent = data.introduction || '无';
+                    document.getElementById('detail-reason').textContent = data.apply_reason;
+                    document.getElementById('detail-time').textContent = data.created_at;
+                    
+                    // 设置批准和拒绝按钮的事件
+                    document.getElementById('detail-approve-btn').onclick = function() {
+                        approveApplication(appId);
+                    };
+                    document.getElementById('detail-reject-btn').onclick = function() {
+                        rejectApplication(appId);
+                    };
+                    
+                    document.getElementById('applicationDetailModal').style.display = 'block';
+                });
+        }
+        
+        // 批准申请
+        function approveApplication(appId) {
+            if (confirm('确定要批准此申请吗？')) {
+                fetch(`/admin/approve_application/${appId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('申请已批准');
+                        location.reload();
+                    } else {
+                        alert('操作失败: ' + data.message);
+                    }
+                });
+            }
+        }
+        
+        // 拒绝申请
+        function rejectApplication(appId) {
+            if (confirm('确定要拒绝此申请吗？')) {
+                fetch(`/admin/reject_application/${appId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('申请已拒绝');
+                        location.reload();
+                    } else {
+                        alert('操作失败: ' + data.message);
+                    }
+                });
+            }
+        }
+        
+        // 隐藏模态框
+        function hideModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+    </script>
 </body>
 </html>
